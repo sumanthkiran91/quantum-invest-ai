@@ -21,7 +21,7 @@ import { Card } from "@/components/card";
 import { DemoNotice } from "@/components/demo-notice";
 import { allInvestments, type Investment, type Region } from "@/lib/market-data";
 import { planStorageKey, sessionStorageKey, type LocalSession } from "@/lib/auth";
-import { brokerRegions, estimateBrokerFee, estimateBrokerTotal, getRecommendedBroker, getTopBrokersForRegion, type BrokerRegion } from "@/lib/broker-data";
+import { brokerRegions, estimateBrokerFee, estimateBrokerTotal, getRecommendedBroker, getTopBrokersForRegion, type BrokerEstimate, type BrokerRegion } from "@/lib/broker-data";
 import {
   generateScenarios,
   getAiInsight,
@@ -46,6 +46,17 @@ import {
 function formatCurrency(value: number) {
   if (value >= 1000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatBrokerCurrency(value: number, broker: Pick<BrokerEstimate, "currencyCode" | "currencySymbol">) {
+  const noDecimals = broker.currencyCode === "JPY" || broker.currencyCode === "INR";
+  const absoluteValue = Math.abs(value);
+  const formatted = `${broker.currencySymbol}${absoluteValue.toLocaleString(undefined, {
+    minimumFractionDigits: noDecimals ? 0 : 2,
+    maximumFractionDigits: noDecimals ? 0 : 2
+  })}`;
+
+  return value < 0 ? `-${formatted}` : formatted;
 }
 
 function Movement({ value }: { value: number }) {
@@ -96,6 +107,12 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const [watchlistNotice, setWatchlistNotice] = useState("");
   const [marketData, setMarketData] = useState<LiveMarketDataResponse | null>(null);
   const [brokerRegion, setBrokerRegion] = useState<BrokerRegion>("Australia");
+
+  useEffect(() => {
+    if (brokerRegions.includes(asset.region as BrokerRegion)) {
+      setBrokerRegion(asset.region as BrokerRegion);
+    }
+  }, [asset.region]);
 
   useEffect(() => {
     const syncPlan = () => {
@@ -149,6 +166,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const related = relatedBase.map((item) => applyLiveQuote(item, marketData?.quotes[item.symbol]));
   const assetQuote = marketData?.quotes[asset.symbol];
   const brokers = getTopBrokersForRegion(brokerRegion as Region);
+  const brokerCurrency = brokers[0];
   const recommendedBroker = getRecommendedBroker(brokerRegion as Region, amount);
 
   function addToWatchlist() {
@@ -258,8 +276,8 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
           <Card className="p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white">Broker Comparison <span className="text-xs font-normal text-slate-500">(Practice {displayAsset.symbol} - {formatCurrency(amount)})</span></h2>
-                <Tooltip text="Broker fees are shown as published-fee estimates for comparison. Charges, spreads, FX fees, market access, eligibility and promotions can change. Always verify directly with the broker before opening an account or placing a trade." />
+                <h2 className="text-sm font-bold text-white">Broker Comparison <span className="text-xs font-normal text-slate-500">(Practice {displayAsset.symbol} - {formatBrokerCurrency(amount, brokerCurrency)})</span></h2>
+                <Tooltip text="Broker fees are shown as published-fee estimates for comparison in the selected region. Charges, spreads, FX fees, market access, eligibility and promotions can change. Always verify directly with the broker before opening an account or placing a trade." />
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-slate-400" htmlFor="broker-region">Region</label>
@@ -292,10 +310,10 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
                         </span>
                       </span>
                       <span>
-                        <span className="block font-semibold text-white">{formatCurrency(estimateBrokerFee(amount, broker))}</span>
+                        <span className="block font-semibold text-white">{formatBrokerCurrency(estimateBrokerFee(amount, broker), broker)}</span>
                         <span className="block text-[10px] leading-4 text-slate-500">{broker.feeLabel}</span>
                       </span>
-                      <span>{formatCurrency(estimateBrokerTotal(amount, broker))}</span>
+                      <span>{formatBrokerCurrency(estimateBrokerTotal(amount, broker), broker)}</span>
                       <span>{broker.speed}</span>
                       <span>{broker.fractional ? <Check className="h-4 w-4 text-emerald-300" /> : <span className="text-slate-500">No</span>}</span>
                       <span>{broker.bestFor}</span>
@@ -305,7 +323,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
               </div>
             </div>
             <p className="mt-2 text-[11px] leading-4 text-slate-500">
-              Published-fee rows use public broker pricing pages checked on {brokers.find((broker) => broker.lastChecked)?.lastChecked ?? "the latest review"}. Final charges can differ because of FX, tax, order type, account plan, settlement method and broker promotions.
+              Published-fee rows use public broker pricing pages checked on {brokers.find((broker) => broker.lastChecked)?.lastChecked ?? "the latest review"}. The practice amount is treated as the selected region&apos;s display currency. Final charges can differ because of FX, tax, order type, account plan, settlement method and broker promotions.
             </p>
             <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-400/10 p-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
