@@ -8,3 +8,4 @@ coverage
 work/*
 !work/.gitkeep
 .git-meta
+.vercel

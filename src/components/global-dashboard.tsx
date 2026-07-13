@@ -36,6 +36,28 @@ import {
 } from "@/lib/market-data";
 import { getMarketStatus, marketTimings } from "@/lib/market-timings";
 
+
+const industryIcons: Record<Industry, string> = {
+  Technology: "TC",
+  Healthcare: "HC",
+  "Private Finance": "PF",
+  "Government Finance": "GF",
+  Insurance: "IN",
+  Cryptocurrency: "BC",
+  "Artificial Intelligence and Robotics": "AI",
+  Energy: "EN",
+  "Renewable Energy": "RE",
+  Automotive: "EV",
+  Retail: "RT",
+  "Real Estate": "RE",
+  Pharmaceuticals: "RX",
+  Biotechnology: "BT",
+  Telecommunications: "5G",
+  Manufacturing: "MF",
+  "Defence and Aerospace": "DA",
+  Commodities: "AU"
+};
+
 const industryDescriptions: Record<Industry, string> = {
   Technology: "Software, hardware and cloud leaders",
   Healthcare: "Hospitals, devices and care networks",
@@ -75,12 +97,11 @@ function Movement({ value }: { value: number }) {
 
 function MarketTicker() {
   return (
-    <Card className="p-3">
-      <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Demonstration market overview">
+    <Card className="p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wide text-white">Market Overview <span className="text-xs font-normal normal-case text-slate-500">(Major indices)</span></h2><Link className="text-xs text-sky-300" href="/">View All</Link></div><div className="flex gap-2 overflow-x-auto pb-1" aria-label="Demonstration market overview">
         {marketOverview.map((market) => (
-          <div className="min-w-36 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" key={market.name}>
-            <p className="text-xs text-slate-400">{market.name}</p>
-            <div className="mt-1 flex items-center justify-between gap-3 text-sm font-semibold">
+          <div className="min-w-32 rounded-lg border border-white/10 bg-[#0a1a33] px-3 py-2" key={market.name}>
+            <p className="text-[11px] font-semibold text-slate-400">{market.name}</p>
+            <div className="mt-1 flex items-center justify-between gap-3 text-xs font-semibold">
               <span className="text-white">{market.value}</span>
               <Movement value={market.movement} />
             </div>
@@ -96,21 +117,17 @@ function IndustryExplorer({ selected, onSelect }: { selected: Industry; onSelect
     <Card className="border-sky-300/20 bg-slate-950/35">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Badge tone="ai">Start here</Badge>
-          <h2 className="mt-3 text-2xl font-bold text-white sm:text-3xl">Explore Markets by Industry</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-            Choose an industry to refresh today&apos;s demonstration leaders and laggards. This helps beginners compare similar investments before opening a details page.
-          </p>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-white">TOP EXPLORE MARKETS BY INDUSTRY</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Select an industry to refresh the demonstration market leaders and laggards.</p>
         </div>
         <Badge tone="neutral">Demonstration data</Badge>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
         {industries.map((industry) => {
           const isSelected = industry === selected;
           return (
             <button
               aria-pressed={isSelected}
-              className={`rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+              className={`min-h-24 min-w-32 rounded-lg border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                 isSelected
                   ? "border-sky-300/70 bg-sky-300/15 shadow-[0_0_34px_rgba(56,189,248,0.14)]"
                   : "border-white/10 bg-quantum-panel/70 hover:border-sky-300/35 hover:bg-slate-900"
@@ -120,10 +137,11 @@ function IndustryExplorer({ selected, onSelect }: { selected: Industry; onSelect
               type="button"
             >
               <div className="flex items-start justify-between gap-3">
-                <span className="text-sm font-semibold text-white">{industry}</span>
+                <span className="grid h-8 w-8 place-items-center rounded-md border border-sky-300/20 bg-gradient-to-br from-sky-400/20 to-violet-500/20 text-[11px] font-bold text-sky-100">{industryIcons[industry]}</span>
                 {isSelected ? <Sparkles className="h-4 w-4 text-sky-200" /> : null}
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-400">{industryDescriptions[industry]}</p>
+              <span className="mt-3 block text-xs font-semibold leading-4 text-white">{industry}</span>
+              <p className="mt-1 text-[10px] leading-4 text-slate-500">{industryDescriptions[industry].split(" ").slice(0, 4).join(" ")}</p>
             </button>
           );
         })}
@@ -148,7 +166,7 @@ function SelectField<T extends string>({
       {label}
       <span className="relative">
         <select
-          className="w-full appearance-none rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 pr-9 text-sm text-white outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
+          className="w-full appearance-none rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 pr-9 text-sm text-white outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
           onChange={(event) => onChange(event.target.value as T)}
           value={value}
         >
@@ -164,25 +182,25 @@ function SelectField<T extends string>({
 
 function MoverList({ title, icon, movers }: { title: string; icon: React.ReactNode; movers: Investment[] }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+    <div className="rounded-lg border border-white/10 bg-[#061225]/70 p-3">
+      <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white">
         {icon}
         {title}
       </div>
       <div className="space-y-2">
         {movers.map((asset) => (
           <Link
-            className="group grid grid-cols-[1fr_auto] gap-3 rounded-xl border border-white/5 bg-slate-900/70 p-3 transition hover:border-sky-300/40 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-300"
+            className="group grid grid-cols-[1fr_auto] gap-3 rounded-md border border-white/5 bg-[#071326] p-2.5 transition hover:border-sky-300/40 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-300"
             href={`/investments/${encodeURIComponent(asset.symbol)}`}
             key={asset.symbol}
           >
             <span>
-              <span className="block text-sm font-semibold text-white group-hover:text-sky-100">{asset.symbol} · {asset.name}</span>
-              <span className="mt-1 block text-xs text-slate-400">{asset.market} · {asset.reason}</span>
+              <span className="block text-xs font-semibold text-white group-hover:text-sky-100">{asset.symbol} · {asset.name}</span>
+              <span className="mt-1 block text-[11px] text-slate-500">{asset.market} · {asset.reason}</span>
             </span>
-            <span className="text-right text-sm font-semibold">
+            <span className="text-right text-xs font-semibold">
               <Movement value={asset.movement} />
-              <span className="mt-1 block text-xs text-slate-400">{formatCurrency(asset.demoPrice)}</span>
+              <span className="mt-1 block text-[11px] text-slate-500">{formatCurrency(asset.demoPrice)}</span>
             </span>
           </Link>
         ))}
@@ -203,15 +221,15 @@ function TopMovers({ industry, region, onIndustryChange, onRegionChange }: {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Badge tone="neutral">Updates when industry changes</Badge>
-          <h2 className="mt-3 text-xl font-bold text-white">Top Movers Today</h2>
-          <p className="mt-1 text-sm text-slate-400">Top 5 growing and losing investments from mock market data.</p>
+          <h2 className="mt-2 text-sm font-bold uppercase tracking-wide text-white">Top Movers Today</h2>
+          <p className="mt-1 text-xs text-slate-400">Top 5 growing and losing investments from mock market data.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:min-w-96">
           <SelectField label="Industry" onChange={onIndustryChange} options={industries} value={industry} />
           <SelectField label="Country or region" onChange={onRegionChange} options={regions} value={region} />
         </div>
       </div>
-      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <MoverList icon={<TrendingUp className="h-4 w-4 text-emerald-300" />} movers={movers.growing} title="Top 5 Growing" />
         <MoverList icon={<TrendingDown className="h-4 w-4 text-red-300" />} movers={movers.losing} title="Top 5 Losing" />
       </div>
@@ -226,7 +244,7 @@ function MarketTimingsCard() {
       <div className="flex items-center gap-3">
         <CalendarClock className="h-5 w-5 text-sky-300" />
         <div>
-          <h2 className="text-lg font-semibold text-white">Global Market Timings</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-white">Global Market Timings</h2>
           <p className="text-xs text-slate-400">Based on your browser time zone</p>
         </div>
       </div>
@@ -235,12 +253,12 @@ function MarketTimingsCard() {
           const status = getMarketStatus(market, now);
           const open = status.status === "Open";
           return (
-            <div className="rounded-xl border border-white/10 bg-slate-950/35 p-3" key={market.market}>
+            <div className="rounded-lg border border-white/10 bg-[#071326] p-2.5" key={market.market}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-sm">{market.flag}</span>
                   <div>
-                    <p className="text-sm font-semibold text-white">{market.country}</p>
+                    <p className="text-xs font-semibold text-white">{market.country}</p>
                     <p className="text-xs text-slate-400">{market.market}</p>
                   </div>
                 </div>
@@ -266,16 +284,16 @@ function InsightCard({ icon, title, children, tone = "neutral" }: { icon: React.
     <Card className={border}>
       <div className="flex items-center gap-3">
         {icon}
-        <h3 className="text-base font-semibold text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
       </div>
-      <div className="mt-3 text-sm leading-6 text-slate-300">{children}</div>
+      <div className="mt-3 text-xs leading-5 text-slate-300">{children}</div>
     </Card>
   );
 }
 
 function SupportingCards() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       <InsightCard icon={<Star className="h-5 w-5 text-sky-300" />} title="My Watchlist Preview">
         <div className="flex flex-wrap gap-2">
           {watchlistPreview.map((symbol) => <Badge key={symbol} tone="neutral">{symbol}</Badge>)}
@@ -321,8 +339,8 @@ export function GlobalDashboard() {
     <AppShell active="Dashboard" plan="Free" title="Global Dashboard">
         <DemoNotice />
         <MarketTicker />
-        <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-          <section className="space-y-5">
+        <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
+          <section className="space-y-4">
             <IndustryExplorer onSelect={setIndustry} selected={industry} />
             <TopMovers
               industry={industry}
@@ -332,13 +350,13 @@ export function GlobalDashboard() {
             />
             <SupportingCards />
           </section>
-          <aside className="space-y-5">
+          <aside className="space-y-4">
             <Card className="p-4">
               <label className="relative block">
                 <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <input
                   aria-label="Global search"
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/70 py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
+                  className="w-full rounded-lg border border-white/10 bg-[#071326] py-2 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
                   placeholder="Search demo assets, markets, news"
                   type="search"
                 />
@@ -350,6 +368,7 @@ export function GlobalDashboard() {
     </AppShell>
   );
 }
+
 
 
 

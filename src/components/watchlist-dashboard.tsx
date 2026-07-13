@@ -70,7 +70,7 @@ function TrendLine({ asset }: { asset: Investment }) {
     .join(" ");
 
   return (
-    <svg aria-label={`${asset.symbol} seven day demo trend`} className="h-10 w-28" role="img" viewBox="0 0 96 40">
+    <svg aria-label={`${asset.symbol} seven day demo trend`} className="h-8 w-24" role="img" viewBox="0 0 96 40">
       <polyline fill="none" points={polyline} stroke={asset.movement >= 0 ? "#22C55E" : "#EF4444"} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
     </svg>
   );
@@ -138,6 +138,9 @@ export function WatchlistDashboard() {
 
   const availableAssets = allInvestments.filter((asset) => !symbols.includes(asset.symbol)).slice(0, 10);
   const isFreeLimitReached = plan === "Free" && symbols.length >= FREE_WATCHLIST_LIMIT;
+  const totalMarketValue = selectedAssets.reduce((total, asset) => total + getDemoMarketValue(asset), 0);
+  const todayGainValue = selectedAssets.reduce((total, asset) => total + getDemoMarketValue(asset) * (asset.movement / 100), 0);
+  const todayGainPercent = totalMarketValue ? (todayGainValue / totalMarketValue) * 100 : 0;
 
   function changePlan(nextPlan: AccountPlan) {
     setPlan(nextPlan);
@@ -179,18 +182,27 @@ export function WatchlistDashboard() {
       <Card className="border-sky-300/20 bg-slate-950/35">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <Badge tone="ai">Saved demo investments only</Badge>
-            <h2 className="mt-3 text-2xl font-bold text-white sm:text-3xl">My Watchlist</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Track the investments you choose to save. Prices, values, alerts and trends are realistic demonstration data only.
-            </p>
+            <h2 className="text-xl font-bold text-white">My Watchlists</h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {tabs.slice(0, 5).map((item) => (
+                <button
+                  aria-pressed={tab === item}
+                  className={tab === item ? "rounded-md border border-indigo-400/50 bg-indigo-500/25 px-3 py-1.5 font-semibold text-white focus:outline-none focus:ring-2 focus:ring-sky-300" : "rounded-md border border-white/10 bg-[#071326] px-3 py-1.5 font-semibold text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"}
+                  key={item}
+                  onClick={() => setTab(item)}
+                  type="button"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
+          <div className="rounded-lg border border-white/10 bg-[#071326] p-3">
             <p className="mb-2 text-xs font-semibold text-slate-300">Developer account switcher</p>
             <div className="grid grid-cols-2 gap-2">
               {(["Free", "Premium"] as AccountPlan[]).map((item) => (
                 <button
-                  className={`rounded-xl border px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                  className={`rounded-md border px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                     plan === item
                       ? item === "Premium"
                         ? "border-violet-300/50 bg-violet-500/20 text-violet-100"
@@ -210,18 +222,23 @@ export function WatchlistDashboard() {
             </p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-            <p className="text-xs text-slate-400">Watchlist items</p>
+        <div className="mt-4 grid gap-0 overflow-hidden rounded-lg border border-white/10 bg-[#071326] md:grid-cols-4">
+          <div className="border-white/10 p-4 md:border-r">
+            <p className="text-xs text-slate-400">Total Watchlists</p>
+            <p className="mt-1 text-2xl font-bold text-white">5</p>
+          </div>
+          <div className="border-white/10 p-4 md:border-r">
+            <p className="text-xs text-slate-400">Total Stocks</p>
             <p className="mt-1 text-2xl font-bold text-white">{symbols.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-            <p className="text-xs text-slate-400">Plan state</p>
-            <p className={plan === "Premium" ? "mt-1 text-2xl font-bold text-violet-200" : "mt-1 text-2xl font-bold text-sky-100"}>{plan}</p>
+          <div className="border-white/10 p-4 md:border-r">
+            <p className="text-xs text-slate-400">Today&apos;s Gain</p>
+            <p className={todayGainValue >= 0 ? "mt-1 text-sm font-bold text-emerald-300" : "mt-1 text-sm font-bold text-red-300"}>{todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%</p>
+            <p className={todayGainValue >= 0 ? "text-xs text-emerald-300" : "text-xs text-red-300"}>{formatCurrency(todayGainValue)}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-            <p className="text-xs text-slate-400">Alert quality</p>
-            <p className="mt-1 text-sm font-semibold text-white">{plan === "Premium" ? "Smart Alerts unlocked" : "Delayed demo alerts"}</p>
+          <div className="p-4">
+            <p className="text-xs text-slate-400">Total Value</p>
+            <p className="mt-1 text-2xl font-bold text-white">{formatCurrency(totalMarketValue)}</p>
           </div>
         </div>
       </Card>
@@ -298,7 +315,7 @@ export function WatchlistDashboard() {
               {tabs.map((item) => (
                 <button
                   aria-selected={tab === item}
-                  className={`whitespace-nowrap rounded-full border px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                  className={`whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                     tab === item ? "border-sky-300/50 bg-sky-300/15 text-sky-100" : "border-white/10 bg-slate-950/50 text-slate-300 hover:text-white"
                   }`}
                   key={item}
@@ -341,7 +358,7 @@ export function WatchlistDashboard() {
                 {visibleAssets.map((asset) => {
                   const marketValue = getDemoMarketValue(asset);
                   return (
-                    <div className="grid gap-3 p-4 lg:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr_0.9fr_0.8fr_0.7fr_0.7fr] lg:items-center" key={asset.symbol}>
+                    <div className="grid gap-3 px-4 py-2.5 lg:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr_0.9fr_0.8fr_0.7fr_0.7fr] lg:items-center" key={asset.symbol}>
                       <Link className="group focus:outline-none focus:ring-2 focus:ring-sky-300" href={`/investments/${encodeURIComponent(asset.symbol)}`}>
                         <span className="block text-sm font-bold text-white group-hover:text-sky-100">{asset.symbol}</span>
                         <span className="block text-sm text-slate-400">{asset.name}</span>

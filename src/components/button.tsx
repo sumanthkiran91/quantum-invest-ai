@@ -18,7 +18,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        "inline-flex min-h-10 items-center justify-center rounded-xl border px-4 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-quantum-ink disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-quantum-ink disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className
       )}

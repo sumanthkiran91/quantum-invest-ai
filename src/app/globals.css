@@ -13,10 +13,12 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 30rem),
-    linear-gradient(135deg, #050814 0%, #080d1c 45%, #03050d 100%);
+    radial-gradient(circle at top left, rgba(46, 91, 255, 0.16), transparent 24rem),
+    radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.1), transparent 28rem),
+    linear-gradient(135deg, #030712 0%, #061225 48%, #020617 100%);
   color: #f8fafc;
   font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
 }
 
 a {
@@ -33,4 +35,14 @@ textarea {
 
 ::selection {
   background: rgba(167, 139, 250, 0.35);
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.22);
+  border-radius: 999px;
 }

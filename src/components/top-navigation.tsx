@@ -2,18 +2,44 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Bell, BrainCircuit, ChartNoAxesCombined, FileText, LogOut, Search, UserRound, WalletCards, Zap } from "lucide-react";
+import {
+  Bell,
+  BrainCircuit,
+  Briefcase,
+  ChartNoAxesCombined,
+  FileText,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Search,
+  Settings,
+  ShieldCheck,
+  Star,
+  UserRound,
+  WalletCards
+} from "lucide-react";
 import { Badge } from "@/components/badge";
 import { planStorageKey, sessionStorageKey, type AccountPlan, type LocalSession } from "@/lib/auth";
 
-const navItems = [
-  { label: "Dashboard", href: "/", icon: ChartNoAxesCombined },
+const topItems = [
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "AI Discover", href: "/ai-discover", icon: BrainCircuit },
-  { label: "Smart Alerts", href: "/smart-alerts", icon: Zap },
+  { label: "Smart Alerts", href: "/smart-alerts", icon: Bell },
   { label: "Practice Invest", href: "/practice-invest", icon: WalletCards },
-  { label: "Compare Brokers", href: "/compare-brokers", icon: Search },
-  { label: "AI Daily Report", href: "/ai-daily-report", icon: FileText },
-  { label: "Watchlist", href: "/watchlist", icon: WalletCards }
+  { label: "Compare Brokers", href: "/compare-brokers", icon: Briefcase },
+  { label: "AI Daily Report", href: "/ai-daily-report", icon: FileText }
+];
+
+const sideItems = [
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Watchlist", href: "/watchlist", icon: Star },
+  { label: "Portfolio", href: "/portfolio", icon: ChartNoAxesCombined },
+  { label: "Discover", href: "/ai-discover", icon: BrainCircuit },
+  { label: "Alerts", href: "/smart-alerts", icon: Bell },
+  { label: "Reports", href: "/ai-daily-report", icon: FileText },
+  { label: "Brokers", href: "/compare-brokers", icon: Briefcase },
+  { label: "Learning Center", href: "/practice-invest", icon: GraduationCap },
+  { label: "Settings", href: "/upgrade", icon: Settings }
 ];
 
 function readSession() {
@@ -75,58 +101,73 @@ export function TopNavigation({
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-quantum-border bg-quantum-ink/88 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 border-b border-sky-300/10 bg-[#020817]/95 backdrop-blur-xl">
+      <span className="sr-only">{title}</span>
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-3 px-3 py-2 sm:px-4 xl:grid-cols-[170px_1fr] xl:items-center">
+        <Link className="flex items-center gap-2" href="/">
+          <span className="grid h-9 w-9 place-items-center rounded-lg border border-sky-300/25 bg-gradient-to-br from-sky-400/25 to-violet-500/25">
+            <ShieldCheck className="h-5 w-5 text-sky-200" />
+          </span>
+          <span>
+            <span className="block text-sm font-bold leading-4 text-white">Quantum Invest AI</span>
+            <span className="block text-[10px] text-slate-400">AI-Powered Investment Intelligence</span>
+          </span>
+        </Link>
+
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">Quantum Invest AI</p>
-            <h1 className="text-xl font-bold text-white">{title}</h1>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Badge tone={currentPlan === "Premium" ? "premium" : "neutral"}>{currentPlan} account</Badge>
-            <label className="sr-only" htmlFor="developer-plan-switcher">Developer account switcher</label>
+          <nav aria-label="Primary navigation" className="flex gap-1 overflow-x-auto pb-1 xl:pb-0">
+            {topItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  className={`flex min-w-fit items-center gap-1.5 rounded-md border px-2.5 py-2 text-[11px] transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                    item.label === active
+                      ? "border-indigo-400/45 bg-indigo-500/20 text-white shadow-[inset_0_-2px_0_rgba(99,102,241,0.9)]"
+                      : "border-transparent text-slate-300 hover:bg-slate-900/80 hover:text-white"
+                  }`}
+                  href={item.href}
+                  key={item.label}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 xl:flex-none">
+            <label className="relative hidden w-72 lg:block">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                aria-label="Search stocks, crypto and ETFs"
+                className="h-9 w-full rounded-lg border border-white/10 bg-[#071326] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-sky-300/50"
+                placeholder="Search stocks, crypto, ETFs..."
+              />
+            </label>
             <select
-              className="rounded-full border border-quantum-border bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:ring-2 focus:ring-sky-300"
-              id="developer-plan-switcher"
+              className="h-9 rounded-lg border border-white/10 bg-[#071326] px-2 text-[11px] font-semibold text-slate-200 outline-none focus:ring-2 focus:ring-sky-300"
               onChange={(event) => changePlan(event.target.value as AccountPlan)}
               value={currentPlan}
             >
-              <option value="Free">Free view</option>
-              <option value="Premium">Premium view</option>
+              <option value="Free">Free</option>
+              <option value="Premium">Premium</option>
             </select>
-            <Link className="rounded-full border border-violet-300/30 bg-violet-500/15 px-3 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/25" href="/upgrade">Upgrade demo</Link>
-            <button aria-label="Global search" className="rounded-full border border-quantum-border p-2 text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
-              <Search className="h-4 w-4" />
-            </button>
-            <button aria-label="Notifications" className="rounded-full border border-quantum-border p-2 text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            <button aria-label="Notifications" className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-[#071326] text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
               <Bell className="h-4 w-4" />
             </button>
             {session ? (
-              <button aria-label="Logout" className="rounded-full border border-quantum-border p-2 text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300" onClick={logout} type="button" title={`Logout ${session.email}`}>
-                <LogOut className="h-4 w-4" />
+              <button aria-label="Logout" className="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#071326] px-2 text-left text-slate-200 hover:bg-slate-800" onClick={logout} title={`Logout ${session.email}`} type="button">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-200 text-[10px] font-bold text-slate-950">{session.name.slice(0, 1)}</span>
+                <span className="hidden leading-3 sm:block"><span className="block text-[11px] font-bold">{session.name.split(" ")[0]}</span><Badge tone={currentPlan === "Premium" ? "premium" : "neutral"}>{currentPlan}</Badge></span>
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             ) : (
-              <Link aria-label="Login" className="rounded-full border border-quantum-border p-2 text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300" href="/login">
+              <Link aria-label="Login" className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-[#071326] text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300" href="/login">
                 <UserRound className="h-4 w-4" />
               </Link>
             )}
           </div>
         </div>
-        <nav aria-label="Primary navigation" className="flex gap-2 overflow-x-auto pb-1">
-          {navItems.slice(0, 6).map((item) => (
-            <Link
-              className={`whitespace-nowrap rounded-full border px-3 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
-                item.label === active
-                  ? "border-sky-300/50 bg-sky-300/15 text-sky-100"
-                  : "border-quantum-border bg-slate-950/40 text-slate-300 hover:border-sky-300/30 hover:text-white"
-              }`}
-              href={item.href}
-              key={item.label}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
       </div>
     </header>
   );
@@ -135,16 +176,14 @@ export function TopNavigation({
 export function SideNavigation({ active = "Dashboard" }: { active?: string }) {
   return (
     <aside className="hidden xl:block">
-      <nav aria-label="Side navigation" className="sticky top-32 space-y-2 rounded-2xl border border-quantum-border bg-quantum-card/70 p-3 shadow-premium">
-        {navItems.map((item) => {
+      <nav aria-label="Side navigation" className="sticky top-[74px] space-y-1 rounded-lg border border-sky-300/10 bg-[#061225]/90 p-2 shadow-[0_18px_45px_rgba(0,0,0,0.28)]">
+        {sideItems.map((item) => {
           const Icon = item.icon;
           const selected = item.label === active;
           return (
             <Link
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
-                selected
-                  ? "border-sky-300/45 bg-sky-300/15 text-sky-100"
-                  : "border-transparent text-slate-300 hover:border-white/10 hover:bg-slate-900/70 hover:text-white"
+              className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                selected ? "bg-indigo-500/25 text-white" : "text-slate-300 hover:bg-slate-900/80 hover:text-white"
               }`}
               href={item.href}
               key={item.label}
@@ -154,6 +193,17 @@ export function SideNavigation({ active = "Dashboard" }: { active?: string }) {
             </Link>
           );
         })}
+        <div className="mt-4 rounded-lg border border-violet-300/15 bg-violet-500/10 p-3">
+          <p className="text-xs font-semibold text-violet-100">Upgrade to Premium</p>
+          <ul className="mt-2 space-y-1 text-[10px] leading-4 text-slate-300">
+            <li>Unlimited Watchlists</li>
+            <li>Real-time Alerts</li>
+            <li>Advanced AI Reports</li>
+          </ul>
+          <Link className="mt-3 inline-flex w-full justify-center rounded-md bg-indigo-500 px-2 py-2 text-[11px] font-bold text-white hover:bg-indigo-400" href="/upgrade">
+            Upgrade Now
+          </Link>
+        </div>
       </nav>
     </aside>
   );

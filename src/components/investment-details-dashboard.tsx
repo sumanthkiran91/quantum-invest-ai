@@ -71,7 +71,7 @@ function DemoChart({ asset, range }: { asset: Investment; range: TimeRange }) {
     .join(" ");
 
   return (
-    <svg aria-label={`${asset.symbol} ${range} demonstration chart`} className="h-64 w-full" role="img" viewBox="0 0 580 240">
+    <svg aria-label={`${asset.symbol} ${range} demonstration chart`} className="h-52 w-full" role="img" viewBox="0 0 580 240">
       <defs>
         <linearGradient id={`chart-${asset.symbol}`} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={asset.movement >= 0 ? "#22C55E" : "#EF4444"} stopOpacity="0.28" />
@@ -98,8 +98,8 @@ function Tooltip({ text }: { text: string }) {
 
 function ScenarioCard({ title, children }: { title: ScenarioTerm; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
+    <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
       <div className="mt-3 space-y-3">{children}</div>
     </div>
   );
@@ -152,12 +152,12 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
       <Card className="border-sky-300/20 bg-slate-950/35">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="grid h-16 w-16 flex-none place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-xl font-bold text-sky-100">
+            <div className="grid h-14 w-14 flex-none place-items-center rounded-lg border border-sky-300/25 bg-sky-300/10 text-xl font-bold text-sky-100">
               {asset.symbol.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-3xl font-bold text-white">{asset.name}</h1>
+                <h1 className="text-xl font-bold text-white">{asset.name}</h1>
                 <Badge tone="neutral">{asset.symbol}</Badge>
               </div>
               <p className="mt-1 text-sm text-slate-400">{asset.region} · {asset.market} · {asset.type}</p>
@@ -168,12 +168,12 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-96">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+            <div className="rounded-lg border border-white/10 bg-[#071326] p-3">
               <p className="text-xs text-slate-400">Current demo price</p>
-              <p className="mt-1 text-2xl font-bold text-white">{formatCurrency(asset.demoPrice)}</p>
+              <p className="mt-1 text-xl font-bold text-white">{formatCurrency(asset.demoPrice)}</p>
               <p className="mt-1 text-sm"><Movement value={asset.movement} /> today</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+            <div className="rounded-lg border border-white/10 bg-[#071326] p-3">
               <p className="text-xs text-slate-400">Prototype actions</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button onClick={addToWatchlist}><Plus className="mr-2 h-4 w-4" /> Watchlist</Button>
@@ -185,7 +185,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
         {watchlistNotice ? <p className="mt-4 rounded-xl border border-sky-300/20 bg-sky-300/10 p-3 text-sm text-sky-100">{watchlistNotice}</p> : null}
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
         <Card>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -195,7 +195,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             <div className="flex gap-2 overflow-x-auto pb-1">
               {timeRanges.map((item) => (
                 <button
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                     range === item ? "border-sky-300/60 bg-sky-300/15 text-sky-100" : "border-white/10 bg-slate-950 text-slate-300"
                   }`}
                   key={item}
@@ -207,7 +207,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
               ))}
             </div>
           </div>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+          <div className="mt-4 rounded-lg border border-white/10 bg-[#071326] p-3">
             <DemoChart asset={asset} range={range} />
           </div>
         </Card>
@@ -256,18 +256,18 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             />
           </label>
         </div>
-        <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        <div className="mt-4 grid gap-3 xl:grid-cols-3">
           {(["Short Term", "Medium Term", "Long Term"] as ScenarioTerm[]).map((term) => (
             <ScenarioCard key={term} title={term}>
               {scenarios.filter((scenario) => scenario.term === term).map((scenario) => {
                 const positive = scenario.profitLoss >= 0;
                 return (
-                  <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3" key={`${scenario.term}-${scenario.strength}`}>
+                  <div className="rounded-lg border border-white/10 bg-[#071326] p-3" key={`${scenario.term}-${scenario.strength}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-semibold text-white">{scenario.strength}</p>
                       {positive ? <TrendingUp className="h-4 w-4 text-emerald-300" /> : <TrendingDown className="h-4 w-4 text-red-300" />}
                     </div>
-                    <p className="mt-2 text-2xl font-bold text-white">{formatCurrency(scenario.finalValue)}</p>
+                    <p className="mt-2 text-xl font-bold text-white">{formatCurrency(scenario.finalValue)}</p>
                     <p className={positive ? "text-sm text-emerald-300" : "text-sm text-red-300"}>
                       {positive ? "+" : ""}{formatCurrency(scenario.profitLoss)} · {positive ? "+" : ""}{scenario.percentageChange}%
                     </p>
@@ -280,7 +280,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
         </div>
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <section className="grid gap-5 md:grid-cols-2">
           <Card>
             <div className="flex items-center gap-3"><Newspaper className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Relevant News and Alerts</h2></div>
@@ -322,7 +322,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
           </Card>
         </section>
 
-        <aside className="space-y-5">
+        <aside className="space-y-4">
           <Card>
             <div className="flex items-center gap-3"><BookOpen className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">{mode} Mode</h2></div>
             <div className="mt-4 grid grid-cols-2 gap-2">
