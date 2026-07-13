@@ -21,7 +21,7 @@ import { Card } from "@/components/card";
 import { DemoNotice } from "@/components/demo-notice";
 import { allInvestments, type Investment, type Region } from "@/lib/market-data";
 import { planStorageKey, sessionStorageKey, type LocalSession } from "@/lib/auth";
-import { brokerRegions, estimateBrokerTotal, getRecommendedBroker, getTopBrokersForRegion, type BrokerRegion } from "@/lib/broker-data";
+import { brokerRegions, estimateBrokerFee, estimateBrokerTotal, getRecommendedBroker, getTopBrokersForRegion, type BrokerRegion } from "@/lib/broker-data";
 import {
   generateScenarios,
   getAiInsight,
@@ -149,7 +149,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const related = relatedBase.map((item) => applyLiveQuote(item, marketData?.quotes[item.symbol]));
   const assetQuote = marketData?.quotes[asset.symbol];
   const brokers = getTopBrokersForRegion(brokerRegion as Region);
-  const recommendedBroker = getRecommendedBroker(brokerRegion as Region);
+  const recommendedBroker = getRecommendedBroker(brokerRegion as Region, amount);
 
   function addToWatchlist() {
     const raw = window.localStorage.getItem("quantum-invest-ai-watchlist");
@@ -259,7 +259,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-white">Broker Comparison <span className="text-xs font-normal text-slate-500">(Practice {displayAsset.symbol} - {formatCurrency(amount)})</span></h2>
-                <Tooltip text="Broker fees and features are prototype estimates for comparison only. Charges, spreads, FX fees, market access and eligibility can change. Always verify directly with the broker before opening an account or placing a trade." />
+                <Tooltip text="Broker fees are shown as published-fee estimates for comparison. Charges, spreads, FX fees, market access, eligibility and promotions can change. Always verify directly with the broker before opening an account or placing a trade." />
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-slate-400" htmlFor="broker-region">Region</label>
@@ -273,23 +273,40 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
                 </select>
               </div>
             </div>
-            <div className="mt-3 overflow-hidden rounded-lg border border-white/10">
-              <div className="grid grid-cols-[1.15fr_0.7fr_0.75fr_0.7fr_0.7fr_1fr] gap-2 bg-slate-950/70 px-2 py-2 text-[11px] font-semibold text-slate-400">
-                <span>Broker</span><span>Est. fee</span><span>Total cost</span><span>Speed</span><span>Fractional</span><span>Best for</span>
-              </div>
-              <div className="divide-y divide-white/10">
-                {brokers.map((broker) => (
-                  <div className="grid grid-cols-[1.15fr_0.7fr_0.75fr_0.7fr_0.7fr_1fr] gap-2 px-2 py-2 text-xs text-slate-300" key={broker.name}>
-                    <span className="font-semibold text-white">{broker.name}</span>
-                    <span>{formatCurrency(broker.fee)}</span>
-                    <span>{formatCurrency(estimateBrokerTotal(amount, broker))}</span>
-                    <span>{broker.speed}</span>
-                    <span>{broker.fractional ? <Check className="h-4 w-4 text-emerald-300" /> : <span className="text-slate-500">No</span>}</span>
-                    <span>{broker.bestFor}</span>
-                  </div>
-                ))}
+            <div className="mt-3 overflow-x-auto rounded-lg border border-white/10">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[1.05fr_1.25fr_0.75fr_0.65fr_0.65fr_0.95fr] gap-2 bg-slate-950/70 px-2 py-2 text-[11px] font-semibold text-slate-400">
+                  <span>Broker</span><span>Est. fee</span><span>Total cost</span><span>Speed</span><span>Fractional</span><span>Best for</span>
+                </div>
+                <div className="divide-y divide-white/10">
+                  {brokers.map((broker) => (
+                    <div className="grid grid-cols-[1.05fr_1.25fr_0.75fr_0.65fr_0.65fr_0.95fr] gap-2 px-2 py-2 text-xs text-slate-300" key={broker.name}>
+                      <span>
+                        {broker.sourceUrl ? (
+                          <a className="block font-semibold text-white hover:text-sky-200" href={broker.sourceUrl} rel="noreferrer" target="_blank">{broker.name}</a>
+                        ) : (
+                          <span className="block font-semibold text-white">{broker.name}</span>
+                        )}
+                        <span className={broker.dataQuality === "source-backed" ? "block text-[10px] text-emerald-300" : "block text-[10px] text-amber-200"}>
+                          {broker.dataQuality === "source-backed" ? "Published fee" : "Prototype estimate"}
+                        </span>
+                      </span>
+                      <span>
+                        <span className="block font-semibold text-white">{formatCurrency(estimateBrokerFee(amount, broker))}</span>
+                        <span className="block text-[10px] leading-4 text-slate-500">{broker.feeLabel}</span>
+                      </span>
+                      <span>{formatCurrency(estimateBrokerTotal(amount, broker))}</span>
+                      <span>{broker.speed}</span>
+                      <span>{broker.fractional ? <Check className="h-4 w-4 text-emerald-300" /> : <span className="text-slate-500">No</span>}</span>
+                      <span>{broker.bestFor}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+            <p className="mt-2 text-[11px] leading-4 text-slate-500">
+              Published-fee rows use public broker pricing pages checked on {brokers.find((broker) => broker.lastChecked)?.lastChecked ?? "the latest review"}. Final charges can differ because of FX, tax, order type, account plan, settlement method and broker promotions.
+            </p>
             <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-400/10 p-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
