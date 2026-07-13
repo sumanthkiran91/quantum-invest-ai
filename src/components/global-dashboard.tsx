@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Bell,
@@ -35,7 +35,13 @@ import {
   watchlistPreview
 } from "@/lib/market-data";
 import { getMarketStatus, marketTimings } from "@/lib/market-timings";
-
+import {
+  applyLiveQuote,
+  buildDemoMarketDataResponse,
+  getMarketDataSymbols,
+  liveDataFallbackMessage,
+  type LiveMarketDataResponse
+} from "@/lib/live-market-data";
 
 const industryIcons: Record<Industry, string> = {
   Technology: "TC",
@@ -58,7 +64,6 @@ const industryIcons: Record<Industry, string> = {
   Commodities: "AU"
 };
 
-
 function formatCurrency(value: number) {
   if (value >= 1000) {
     return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -68,19 +73,51 @@ function formatCurrency(value: number) {
 
 function Movement({ value }: { value: number }) {
   const positive = value >= 0;
+  return <span className={positive ? "text-emerald-300" : "text-red-300"}>{positive ? "+" : ""}{value.toFixed(2)}%</span>;
+}
+
+function MarketDataStatus({ marketData }: { marketData: LiveMarketDataResponse | null }) {
+  if (!marketData) {
+    return (
+      <div className="rounded-lg border border-sky-300/15 bg-sky-300/5 px-3 py-2 text-xs text-sky-100">
+        Checking live market data provider. The page will keep using safe fallback data while this loads.
+      </div>
+    );
+  }
+
+  if (marketData.warning) {
+    return (
+      <div className="rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100" role="status">
+        {marketData.warning}
+      </div>
+    );
+  }
+
   return (
-    <span className={positive ? "text-emerald-300" : "text-red-300"}>
-      {positive ? "+" : ""}{value.toFixed(2)}%
-    </span>
+    <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100" role="status">
+      Live display data connected through {marketData.provider}. Last updated {new Date(marketData.updatedAt).toLocaleTimeString()}.
+    </div>
   );
 }
 
-function MarketTicker() {
+function MarketTicker({ marketData }: { marketData: LiveMarketDataResponse | null }) {
+  const overview = marketData?.overview.length
+    ? marketData.overview
+    : marketOverview.map((item) => ({ ...item, source: "demo" as const }));
+
   return (
-    <Card className="min-w-0 overflow-hidden p-3"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wide text-white">Market Overview <span className="text-xs font-normal normal-case text-slate-500">(Major indices)</span></h2><Link className="text-xs text-sky-300" href="/">View All</Link></div><div className="scrollbar-thin flex max-w-full gap-2 overflow-x-auto pb-2" aria-label="Demonstration market overview">
-        {marketOverview.map((market) => (
+    <Card className="min-w-0 overflow-hidden p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-white">Market Overview <span className="text-xs font-normal normal-case text-slate-500">(Major indices)</span></h2>
+        <Link className="text-xs text-sky-300" href="/">View All</Link>
+      </div>
+      <div className="scrollbar-thin flex max-w-full gap-2 overflow-x-auto pb-2" aria-label="Market overview">
+        {overview.map((market) => (
           <div className="min-w-[112px] rounded-lg border border-white/10 bg-[#0a1a33] px-2.5 py-2" key={market.name}>
-            <p className="text-[11px] font-semibold text-slate-400">{market.name}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[11px] font-semibold text-slate-400">{market.name}</p>
+              <span className={market.source === "live" ? "text-[9px] font-bold uppercase text-emerald-300" : "text-[9px] font-bold uppercase text-slate-500"}>{market.source}</span>
+            </div>
             <div className="mt-1 flex items-center justify-between gap-3 text-xs font-semibold">
               <span className="text-white">{market.value}</span>
               <Movement value={market.movement} />
@@ -97,9 +134,7 @@ function IndustryExplorer({ selected, onSelect }: { selected: Industry; onSelect
   return (
     <Card className="min-w-0 overflow-hidden border-sky-300/20 bg-slate-950/35 p-3">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-white">TOP EXPLORE MARKETS BY INDUSTRY</h2>
-        </div>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-white">TOP EXPLORE MARKETS BY INDUSTRY</h2>
         <Badge tone="neutral">Demo</Badge>
       </div>
       <div className="scrollbar-thin mt-3 flex max-w-full gap-2 overflow-x-auto pb-2">
@@ -151,9 +186,7 @@ function SelectField<T extends string>({
           onChange={(event) => onChange(event.target.value as T)}
           value={value}
         >
-          {options.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
+          {options.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
         <ChevronDown className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
       </span>
@@ -190,20 +223,28 @@ function MoverList({ title, icon, movers }: { title: string; icon: React.ReactNo
   );
 }
 
-function TopMovers({ industry, region, onIndustryChange, onRegionChange }: {
+function TopMovers({ industry, region, onIndustryChange, onRegionChange, marketData }: {
   industry: Industry;
   region: Region;
   onIndustryChange: (industry: Industry) => void;
   onRegionChange: (region: Region) => void;
+  marketData: LiveMarketDataResponse | null;
 }) {
-  const movers = useMemo(() => getTopMovers(industry, region), [industry, region]);
+  const movers = useMemo(() => {
+    const base = getTopMovers(industry, region);
+    return {
+      growing: base.growing.map((asset) => applyLiveQuote(asset, marketData?.quotes[asset.symbol])),
+      losing: base.losing.map((asset) => applyLiveQuote(asset, marketData?.quotes[asset.symbol]))
+    };
+  }, [industry, marketData, region]);
+
   return (
     <Card>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Badge tone="neutral">Updates when industry changes</Badge>
+          <Badge tone={marketData?.mode === "live" ? "positive" : "neutral"}>{marketData?.mode === "live" ? "Live display data" : "Safe fallback ready"}</Badge>
           <h2 className="mt-2 text-sm font-bold uppercase tracking-wide text-white">Top Movers Today</h2>
-          <p className="mt-1 text-xs text-slate-400">Top 5 growing and losing investments from mock market data.</p>
+          <p className="mt-1 text-xs text-slate-400">Top 5 growing and losing investments. Live quotes are used when the provider responds.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:min-w-96">
           <SelectField label="Industry" onChange={onIndustryChange} options={industries} value={industry} />
@@ -276,22 +317,16 @@ function SupportingCards() {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       <InsightCard icon={<Star className="h-5 w-5 text-sky-300" />} title="My Watchlist Preview">
-        <div className="flex flex-wrap gap-2">
-          {watchlistPreview.map((symbol) => <Badge key={symbol} tone="neutral">{symbol}</Badge>)}
-        </div>
+        <div className="flex flex-wrap gap-2">{watchlistPreview.map((symbol) => <Badge key={symbol} tone="neutral">{symbol}</Badge>)}</div>
       </InsightCard>
       <InsightCard icon={<WalletCards className="h-5 w-5 text-emerald-300" />} title="Portfolio Summary">
         Demo portfolio value <strong className="text-white">$24,680</strong>, up <span className="text-emerald-300">+1.8%</span> today.
       </InsightCard>
       <InsightCard icon={<Sparkles className="h-5 w-5 text-violet-300" />} title="AI Investment Suggestions" tone="ai">
-        <ul className="space-y-2">
-          {aiSuggestions.map((item) => <li key={item}>{item}</li>)}
-        </ul>
+        <ul className="space-y-2">{aiSuggestions.map((item) => <li key={item}>{item}</li>)}</ul>
       </InsightCard>
       <InsightCard icon={<Newspaper className="h-5 w-5 text-sky-300" />} title="Market News and Alerts">
-        <ul className="space-y-2">
-          {newsAlerts.map((item) => <li key={item}>{item}</li>)}
-        </ul>
+        <ul className="space-y-2">{newsAlerts.map((item) => <li key={item}>{item}</li>)}</ul>
       </InsightCard>
       <InsightCard icon={<Activity className="h-5 w-5 text-sky-300" />} title="AI Daily Report">
         Today&apos;s demo report highlights AI, crypto and renewable energy. Premium users will see deeper commentary in a later phase.
@@ -306,7 +341,7 @@ function SupportingCards() {
         Compare demonstration broker features later without connecting a real brokerage account.
       </InsightCard>
       <InsightCard icon={<Bell className="h-5 w-5 text-red-300" />} title="Risk Reminders">
-        Market movement can change quickly. Treat all figures here as educational demonstration data, not financial advice.
+        Market movement can change quickly. Treat all figures here as educational or provider display data, not financial advice.
       </InsightCard>
     </div>
   );
@@ -315,42 +350,71 @@ function SupportingCards() {
 export function GlobalDashboard() {
   const [industry, setIndustry] = useState<Industry>("Technology");
   const [region, setRegion] = useState<Region>("Global");
+  const [marketData, setMarketData] = useState<LiveMarketDataResponse | null>(null);
+
+  const selectedMoverSymbols = useMemo(() => {
+    const movers = getTopMovers(industry, region);
+    return getMarketDataSymbols(movers.growing.map((asset) => asset.symbol), movers.losing.map((asset) => asset.symbol));
+  }, [industry, region]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const symbols = selectedMoverSymbols.join(",");
+
+    async function loadMarketData() {
+      try {
+        const response = await fetch(`/api/market-data?overview=1&symbols=${encodeURIComponent(symbols)}`, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("Market data request failed");
+        const data = (await response.json()) as LiveMarketDataResponse;
+        if (!cancelled) setMarketData(data);
+      } catch {
+        if (!cancelled) setMarketData(buildDemoMarketDataResponse(selectedMoverSymbols, liveDataFallbackMessage));
+      }
+    }
+
+    loadMarketData();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [selectedMoverSymbols]);
 
   return (
     <AppShell active="Dashboard" plan="Free" title="Global Dashboard">
-        <DemoNotice />
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[1fr_280px]">
-          <section className="min-w-0 space-y-3">
-            <IndustryExplorer onSelect={setIndustry} selected={industry} />
-            <MarketTicker />
-            <TopMovers
-              industry={industry}
-              onIndustryChange={setIndustry}
-              onRegionChange={setRegion}
-              region={region}
-            />
-            <SupportingCards />
-          </section>
-          <aside className="space-y-3">
-            <Card className="p-4">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  aria-label="Global search"
-                  className="w-full rounded-lg border border-white/10 bg-[#071326] py-2 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
-                  placeholder="Search demo assets, markets, news"
-                  type="search"
-                />
-              </label>
-            </Card>
-            <MarketTimingsCard />
-          </aside>
-        </div>
+      <DemoNotice />
+      <MarketDataStatus marketData={marketData} />
+      <div className="grid min-w-0 gap-3 xl:grid-cols-[1fr_280px]">
+        <section className="min-w-0 space-y-3">
+          <IndustryExplorer onSelect={setIndustry} selected={industry} />
+          <MarketTicker marketData={marketData} />
+          <TopMovers
+            industry={industry}
+            marketData={marketData}
+            onIndustryChange={setIndustry}
+            onRegionChange={setRegion}
+            region={region}
+          />
+          <SupportingCards />
+        </section>
+        <aside className="space-y-3">
+          <Card className="p-4">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <input
+                aria-label="Global search"
+                className="w-full rounded-lg border border-white/10 bg-[#071326] py-2 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/25"
+                placeholder="Search demo assets, markets, news"
+                type="search"
+              />
+            </label>
+          </Card>
+          <MarketTimingsCard />
+        </aside>
+      </div>
     </AppShell>
   );
 }
-
-
-
-
-

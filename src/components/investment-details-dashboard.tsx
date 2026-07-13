@@ -17,6 +17,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
+import { DemoNotice } from "@/components/demo-notice";
 import { allInvestments, type Investment } from "@/lib/market-data";
 import { planStorageKey, sessionStorageKey, type LocalSession } from "@/lib/auth";
 import {
@@ -32,6 +33,13 @@ import {
   type ScenarioTerm,
   type TimeRange
 } from "@/lib/investment-details";
+import {
+  applyLiveQuote,
+  buildDemoMarketDataResponse,
+  getMarketDataSymbols,
+  liveDataFallbackMessage,
+  type LiveMarketDataResponse
+} from "@/lib/live-market-data";
 
 function formatCurrency(value: number) {
   if (value >= 1000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -57,7 +65,7 @@ function DemoChart({ asset, range }: { asset: Investment; range: TimeRange }) {
     .join(" ");
 
   return (
-    <svg aria-label={`${asset.symbol} ${range} demonstration chart`} className="h-28 w-full" role="img" viewBox="0 0 580 130">
+    <svg aria-label={`${asset.symbol} ${range} display chart`} className="h-28 w-full" role="img" viewBox="0 0 580 130">
       {[24, 46, 68, 90, 112].map((y) => <line key={y} stroke="rgba(148,163,184,0.14)" strokeWidth="1" x1="0" x2="560" y1={y} y2={y} />)}
       <polyline fill="none" points={polyline} stroke={asset.movement >= 0 ? "#22C55E" : "#EF4444"} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
     </svg>
@@ -68,12 +76,23 @@ function Tooltip({ text }: { text: string }) {
   return <span className="inline-flex" title={text}><HelpCircle className="h-4 w-4 text-sky-200" /></span>;
 }
 
+function MarketDataStatus({ marketData }: { marketData: LiveMarketDataResponse | null }) {
+  if (!marketData) {
+    return <div className="rounded-lg border border-sky-300/15 bg-sky-300/5 px-3 py-2 text-xs text-sky-100">Checking live quote provider. Safe fallback data remains available.</div>;
+  }
+  if (marketData.warning) {
+    return <div className="rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100" role="status">{marketData.warning}</div>;
+  }
+  return <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100" role="status">Live display data connected. Last updated {new Date(marketData.updatedAt).toLocaleTimeString()}.</div>;
+}
+
 export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const [range, setRange] = useState<TimeRange>("1M");
   const [amount, setAmount] = useState(20);
   const [mode, setMode] = useState<InvestorMode>("Beginner");
   const [plan, setPlan] = useState<"Free" | "Premium">("Free");
   const [watchlistNotice, setWatchlistNotice] = useState("");
+  const [marketData, setMarketData] = useState<LiveMarketDataResponse | null>(null);
 
   useEffect(() => {
     const syncPlan = () => {
@@ -91,10 +110,41 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
     };
   }, []);
 
-  const aiInsight = getAiInsight(asset);
-  const scenarios = useMemo(() => generateScenarios(asset, amount), [amount, asset]);
-  const confidence = getConfidence(asset);
-  const related = getRelatedInvestments(asset, allInvestments);
+  const relatedBase = useMemo(() => getRelatedInvestments(asset, allInvestments), [asset]);
+  const requestedSymbols = useMemo(
+    () => getMarketDataSymbols([asset.symbol], relatedBase.slice(0, 4).map((item) => item.symbol)),
+    [asset.symbol, relatedBase]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    async function loadMarketData() {
+      try {
+        const response = await fetch(`/api/market-data?symbols=${encodeURIComponent(requestedSymbols.join(","))}`, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("Market data request failed");
+        const data = (await response.json()) as LiveMarketDataResponse;
+        if (!cancelled) setMarketData(data);
+      } catch {
+        if (!cancelled) setMarketData(buildDemoMarketDataResponse(requestedSymbols, liveDataFallbackMessage));
+      }
+    }
+    loadMarketData();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [requestedSymbols]);
+
+  const displayAsset = applyLiveQuote(asset, marketData?.quotes[asset.symbol]);
+  const aiInsight = getAiInsight(displayAsset);
+  const scenarios = useMemo(() => generateScenarios(displayAsset, amount), [amount, displayAsset]);
+  const confidence = getConfidence(displayAsset);
+  const related = relatedBase.map((item) => applyLiveQuote(item, marketData?.quotes[item.symbol]));
+  const assetQuote = marketData?.quotes[asset.symbol];
 
   function addToWatchlist() {
     const raw = window.localStorage.getItem("quantum-invest-ai-watchlist");
@@ -106,24 +156,27 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
 
   return (
     <AppShell active="Dashboard" plan={plan} title="Investment Details">
+      <DemoNotice />
+      <MarketDataStatus marketData={marketData} />
       <div className="grid min-w-0 gap-3 xl:grid-cols-[1fr_300px]">
         <section className="min-w-0 space-y-3">
           <Card className="border-sky-300/20 bg-slate-950/35 p-3">
             <div className="grid gap-3 lg:grid-cols-[72px_1fr_210px] lg:items-start">
               <div className="grid h-16 w-16 place-items-center rounded-lg border border-white/10 bg-black text-xl font-bold text-white">
-                {asset.symbol.slice(0, 2).toUpperCase()}
+                {displayAsset.symbol.slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-slate-500">Watchlist / {asset.name}</p>
+                <p className="text-[11px] text-slate-500">Watchlist / {displayAsset.name}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold leading-tight text-white">{asset.name} ({asset.symbol})</h1>
-                  <Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{getMarketStatusLabel(asset)}</Badge>
+                  <h1 className="text-2xl font-bold leading-tight text-white">{displayAsset.name} ({displayAsset.symbol})</h1>
+                  <Badge tone={displayAsset.movement >= 0 ? "positive" : "negative"}>{getMarketStatusLabel(displayAsset)}</Badge>
+                  <Badge tone={assetQuote?.priceSource === "live" ? "positive" : "neutral"}>{assetQuote?.priceSource === "live" ? "Live price" : "Demo fallback"}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">{asset.market} / {asset.region} / {asset.type}</p>
+                <p className="mt-1 text-xs text-slate-400">{displayAsset.market} / {displayAsset.region} / {displayAsset.type}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <span className="text-2xl font-bold text-white">{formatCurrency(asset.demoPrice)}</span>
-                  <span className="text-sm font-semibold"><Movement value={asset.movement} /> today</span>
-                  <span className="text-xs text-slate-500">Demo data only</span>
+                  <span className="text-2xl font-bold text-white">{formatCurrency(displayAsset.demoPrice)}</span>
+                  <span className="text-sm font-semibold"><Movement value={displayAsset.movement} /> today</span>
+                  <span className="text-xs text-slate-500">Display data only, no trading connection</span>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -145,15 +198,15 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
                 </button>
               ))}
             </div>
-            <div className="mt-3 rounded-lg border border-white/10 bg-[#071326] p-2"><DemoChart asset={asset} range={range} /></div>
+            <div className="mt-3 rounded-lg border border-white/10 bg-[#071326] p-2"><DemoChart asset={displayAsset} range={range} /></div>
             {watchlistNotice ? <p className="mt-3 rounded-lg border border-sky-300/20 bg-sky-300/10 p-2 text-xs text-sky-100">{watchlistNotice}</p> : null}
           </Card>
 
           <div className="grid gap-3 xl:grid-cols-[1fr_240px]">
             <Card className="p-3">
               <div className="mb-2 flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white">Investment Scenario <span className="text-xs font-normal text-slate-500">(AI Prediction)</span></h2>
-                <Tooltip text="These figures are educational estimates based on demonstration historical data, market conditions and news assumptions. They are not guaranteed predictions or financial advice." />
+                <h2 className="text-sm font-bold text-white">Investment Scenario <span className="text-xs font-normal text-slate-500">(Educational estimate)</span></h2>
+                <Tooltip text="These figures are educational estimates based on available display data, demonstration historical data, market conditions and news assumptions. They are not guaranteed predictions or financial advice." />
               </div>
               <div className="grid gap-2 lg:grid-cols-3">
                 {(["Short Term", "Medium Term", "Long Term"] as ScenarioTerm[]).map((term) => (
@@ -187,7 +240,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             <Card className="p-3">
               <div className="flex items-center gap-2"><Info className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Key Data</h2></div>
               <div className="mt-3 grid gap-1.5">
-                {getKeyData(asset).slice(0, 9).map((item) => (
+                {getKeyData(displayAsset).slice(0, 9).map((item) => (
                   <div className="flex items-center justify-between border-b border-white/5 py-1 text-xs" key={item.label}>
                     <span className="text-slate-400">{item.label}</span>
                     <span className="font-semibold text-white">{item.value}</span>
@@ -201,8 +254,8 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             <Card className="p-3">
               <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Recent News</h2></div><Link className="text-xs text-sky-300" href="/">View All News</Link></div>
               <ul className="mt-3 space-y-2 text-xs text-slate-300">
-                <li>{asset.name} watched after today&apos;s demonstration move.</li>
-                <li>{asset.industry} sentiment changed after global market rotation.</li>
+                <li>{displayAsset.name} watched after today&apos;s display-data move.</li>
+                <li>{displayAsset.industry} sentiment changed after global market rotation.</li>
                 <li>Analysts monitor pricing, demand and sector momentum.</li>
               </ul>
             </Card>
@@ -219,7 +272,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
 
         <aside className="space-y-3">
           <Card className="border-violet-300/20 bg-violet-500/10 p-3">
-            <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" /><h2 className="text-sm font-bold text-white">AI Insights</h2></div><Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{asset.movement >= 0 ? "Bullish" : "Cautious"}</Badge></div>
+            <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" /><h2 className="text-sm font-bold text-white">AI Insights</h2></div><Badge tone={displayAsset.movement >= 0 ? "positive" : "negative"}>{displayAsset.movement >= 0 ? "Bullish" : "Cautious"}</Badge></div>
             <div className="mt-3 space-y-2 text-xs leading-5 text-slate-200">
               <p>{aiInsight.whatHappened}</p>
               <p>{aiInsight.possibleReasons}</p>

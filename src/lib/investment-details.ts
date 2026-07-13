@@ -1,4 +1,4 @@
-﻿import type { Investment } from "./market-data.ts";
+import type { Investment } from "./market-data.ts";
 
 export type TimeRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y" | "Max";
 export type ScenarioTerm = "Short Term" | "Medium Term" | "Long Term";
@@ -89,7 +89,7 @@ export function generateScenarios(asset: Investment, amount: number) {
 export function getAiInsight(asset: Investment) {
   const movementText = asset.movement >= 0 ? "moved higher" : "moved lower";
   return {
-    whatHappened: `${asset.name} ${movementText} by ${Math.abs(asset.movement).toFixed(2)}% in today's demonstration data.`,
+    whatHappened: `${asset.name} ${movementText} by ${Math.abs(asset.movement).toFixed(2)}% in today's display data.`,
     possibleReasons: asset.reason,
     relevantNews: `${asset.industry} headlines and global risk appetite are the main mock news inputs for this asset.`,
     monitor: `Watch price momentum, sector news, market status and whether the move is broad across ${asset.industry} or limited to ${asset.symbol}.`
@@ -103,7 +103,7 @@ export function getKeyData(asset: Investment) {
     { label: "Market", value: asset.market },
     { label: "Region", value: asset.region },
     { label: "Demo risk", value: `${risk}/10` },
-    { label: "Demo price", value: `$${asset.demoPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
+    { label: "Display price", value: `$${asset.demoPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
     { label: "Today", value: `${asset.movement >= 0 ? "+" : ""}${asset.movement.toFixed(2)}%` }
   ];
 }
