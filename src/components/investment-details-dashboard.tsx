@@ -1,31 +1,22 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  Bell,
   BookOpen,
-  BriefcaseBusiness,
   CalendarDays,
-  CheckCircle2,
-  Crown,
   HelpCircle,
   Info,
   LineChart,
-  Lock,
   Newspaper,
   PlayCircle,
   Plus,
-  Sparkles,
-  TrendingDown,
-  TrendingUp
+  Sparkles
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
-import { DemoNotice } from "@/components/demo-notice";
 import { allInvestments, type Investment } from "@/lib/market-data";
 import { planStorageKey, sessionStorageKey, type LocalSession } from "@/lib/auth";
 import {
@@ -36,7 +27,6 @@ import {
   getKeyData,
   getMarketStatusLabel,
   getRelatedInvestments,
-  getRiskScore,
   timeRanges,
   type InvestorMode,
   type ScenarioTerm,
@@ -50,11 +40,7 @@ function formatCurrency(value: number) {
 
 function Movement({ value }: { value: number }) {
   const positive = value >= 0;
-  return (
-    <span className={positive ? "text-emerald-300" : "text-red-300"}>
-      {positive ? "+" : ""}{value.toFixed(2)}%
-    </span>
-  );
+  return <span className={positive ? "text-emerald-300" : "text-red-300"}>{positive ? "+" : ""}{value.toFixed(2)}%</span>;
 }
 
 function DemoChart({ asset, range }: { asset: Investment; range: TimeRange }) {
@@ -65,44 +51,21 @@ function DemoChart({ asset, range }: { asset: Investment; range: TimeRange }) {
   const polyline = points
     .map((point, index) => {
       const x = (index / (points.length - 1)) * 560;
-      const y = 220 - ((point - min) / rangeSize) * 180;
+      const y = 112 - ((point - min) / rangeSize) * 88;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
 
   return (
-    <svg aria-label={`${asset.symbol} ${range} demonstration chart`} className="h-52 w-full" role="img" viewBox="0 0 580 240">
-      <defs>
-        <linearGradient id={`chart-${asset.symbol}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={asset.movement >= 0 ? "#22C55E" : "#EF4444"} stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#050814" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[40, 85, 130, 175, 220].map((y) => (
-        <line key={y} stroke="rgba(148,163,184,0.14)" strokeWidth="1" x1="0" x2="560" y1={y} y2={y} />
-      ))}
-      <polygon fill={`url(#chart-${asset.symbol})`} points={`0,230 ${polyline} 560,230`} />
-      <polyline fill="none" points={polyline} stroke={asset.movement >= 0 ? "#22C55E" : "#EF4444"} strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
-      <circle cx="560" cy={polyline.split(" ").at(-1)?.split(",")[1] ?? 120} fill="#F8FAFC" r="5" />
+    <svg aria-label={`${asset.symbol} ${range} demonstration chart`} className="h-28 w-full" role="img" viewBox="0 0 580 130">
+      {[24, 46, 68, 90, 112].map((y) => <line key={y} stroke="rgba(148,163,184,0.14)" strokeWidth="1" x1="0" x2="560" y1={y} y2={y} />)}
+      <polyline fill="none" points={polyline} stroke={asset.movement >= 0 ? "#22C55E" : "#EF4444"} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
     </svg>
   );
 }
 
 function Tooltip({ text }: { text: string }) {
-  return (
-    <span className="inline-flex" title={text}>
-      <HelpCircle className="h-4 w-4 text-sky-200" />
-    </span>
-  );
-}
-
-function ScenarioCard({ title, children }: { title: ScenarioTerm; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      <div className="mt-3 space-y-3">{children}</div>
-    </div>
-  );
+  return <span className="inline-flex" title={text}><HelpCircle className="h-4 w-4 text-sky-200" /></span>;
 }
 
 export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
@@ -131,7 +94,6 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const aiInsight = getAiInsight(asset);
   const scenarios = useMemo(() => generateScenarios(asset, amount), [amount, asset]);
   const confidence = getConfidence(asset);
-  const risk = getRiskScore(asset);
   const related = getRelatedInvestments(asset, allInvestments);
 
   function addToWatchlist() {
@@ -144,55 +106,32 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
 
   return (
     <AppShell active="Dashboard" plan={plan} title="Investment Details">
-      <Link className="inline-flex items-center gap-2 text-sm text-sky-200 hover:text-sky-100" href="/">
-        <ArrowLeft className="h-4 w-4" /> Back to Global Dashboard
-      </Link>
-      <DemoNotice />
-
-      <Card className="border-sky-300/20 bg-slate-950/35">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="grid h-14 w-14 flex-none place-items-center rounded-lg border border-sky-300/25 bg-sky-300/10 text-xl font-bold text-sky-100">
-              {asset.symbol.slice(0, 2).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-white">{asset.name}</h1>
-                <Badge tone="neutral">{asset.symbol}</Badge>
+      <div className="grid min-w-0 gap-3 xl:grid-cols-[1fr_300px]">
+        <section className="min-w-0 space-y-3">
+          <Card className="border-sky-300/20 bg-slate-950/35 p-3">
+            <div className="grid gap-3 lg:grid-cols-[72px_1fr_210px] lg:items-start">
+              <div className="grid h-16 w-16 place-items-center rounded-lg border border-white/10 bg-black text-xl font-bold text-white">
+                {asset.symbol.slice(0, 2).toUpperCase()}
               </div>
-              <p className="mt-1 text-sm text-slate-400">{asset.region} · {asset.market} · {asset.type}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{getMarketStatusLabel(asset)}</Badge>
-                <Badge tone="ai">Demo risk {risk}/10</Badge>
+              <div className="min-w-0">
+                <p className="text-[11px] text-slate-500">Watchlist / {asset.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold leading-tight text-white">{asset.name} ({asset.symbol})</h1>
+                  <Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{getMarketStatusLabel(asset)}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{asset.market} / {asset.region} / {asset.type}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <span className="text-2xl font-bold text-white">{formatCurrency(asset.demoPrice)}</span>
+                  <span className="text-sm font-semibold"><Movement value={asset.movement} /> today</span>
+                  <span className="text-xs text-slate-500">Demo data only</span>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-96">
-            <div className="rounded-lg border border-white/10 bg-[#071326] p-3">
-              <p className="text-xs text-slate-400">Current demo price</p>
-              <p className="mt-1 text-xl font-bold text-white">{formatCurrency(asset.demoPrice)}</p>
-              <p className="mt-1 text-sm"><Movement value={asset.movement} /> today</p>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-[#071326] p-3">
-              <p className="text-xs text-slate-400">Prototype actions</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button onClick={addToWatchlist}><Plus className="mr-2 h-4 w-4" /> Watchlist</Button>
-                <Button variant="secondary"><PlayCircle className="mr-2 h-4 w-4" /> Practice</Button>
+              <div className="grid gap-2">
+                <Button onClick={addToWatchlist}><Plus className="mr-2 h-4 w-4" /> Add to Watchlist</Button>
+                <Button variant="secondary"><PlayCircle className="mr-2 h-4 w-4" /> Practice with Virtual Cash</Button>
               </div>
             </div>
-          </div>
-        </div>
-        {watchlistNotice ? <p className="mt-4 rounded-xl border border-sky-300/20 bg-sky-300/10 p-3 text-sm text-sky-100">{watchlistNotice}</p> : null}
-      </Card>
-
-      <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-        <Card>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white">Demonstration Trend</h2>
-              <p className="mt-1 text-sm text-slate-400">Interactive educational chart using mock historical behaviour.</p>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-2 overflow-x-auto border-t border-white/10 pt-3">
               {timeRanges.map((item) => (
                 <button
                   className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300 ${
@@ -206,154 +145,125 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
                 </button>
               ))}
             </div>
-          </div>
-          <div className="mt-4 rounded-lg border border-white/10 bg-[#071326] p-3">
-            <DemoChart asset={asset} range={range} />
-          </div>
-        </Card>
+            <div className="mt-3 rounded-lg border border-white/10 bg-[#071326] p-2"><DemoChart asset={asset} range={range} /></div>
+            {watchlistNotice ? <p className="mt-3 rounded-lg border border-sky-300/20 bg-sky-300/10 p-2 text-xs text-sky-100">{watchlistNotice}</p> : null}
+          </Card>
 
-        <Card className="border-violet-300/20 bg-violet-500/10">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-violet-200" />
-            <h2 className="text-xl font-bold text-white">AI Insight</h2>
-          </div>
-          <div className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
-            <p><strong className="text-white">What happened:</strong> {aiInsight.whatHappened}</p>
-            <p><strong className="text-white">Possible reasons:</strong> {aiInsight.possibleReasons}</p>
-            <p><strong className="text-white">Relevant news:</strong> {aiInsight.relevantNews}</p>
-            <p><strong className="text-white">Monitor:</strong> {aiInsight.monitor}</p>
-          </div>
-          <div className="mt-5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-300">Demo confidence</span>
-              <span className="font-semibold text-white">{confidence}%</span>
-            </div>
-            <div className="mt-2 h-2 rounded-full bg-slate-900">
-              <div className="h-2 rounded-full bg-violet-300" style={{ width: `${confidence}%` }} />
-            </div>
-          </div>
-          <p className="mt-4 text-xs text-slate-400">No guaranteed buy or sell instruction is provided.</p>
-        </Card>
-      </div>
-
-      <Card>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white">Investment Scenario Planner</h2>
-              <Tooltip text="These figures are educational estimates based on demonstration historical data, market conditions and news assumptions. They are not guaranteed predictions or financial advice." />
-            </div>
-            <p className="mt-1 text-sm text-slate-400">Enter a small amount to compare possible educational outcomes.</p>
-          </div>
-          <label className="grid gap-1 text-sm font-semibold text-slate-300 lg:w-60">
-            Demonstration amount
-            <input
-              className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-white outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-300/20"
-              min="1"
-              onChange={(event) => setAmount(Number(event.target.value))}
-              type="number"
-              value={amount}
-            />
-          </label>
-        </div>
-        <div className="mt-4 grid gap-3 xl:grid-cols-3">
-          {(["Short Term", "Medium Term", "Long Term"] as ScenarioTerm[]).map((term) => (
-            <ScenarioCard key={term} title={term}>
-              {scenarios.filter((scenario) => scenario.term === term).map((scenario) => {
-                const positive = scenario.profitLoss >= 0;
-                return (
-                  <div className="rounded-lg border border-white/10 bg-[#071326] p-3" key={`${scenario.term}-${scenario.strength}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-white">{scenario.strength}</p>
-                      {positive ? <TrendingUp className="h-4 w-4 text-emerald-300" /> : <TrendingDown className="h-4 w-4 text-red-300" />}
+          <div className="grid gap-3 xl:grid-cols-[1fr_240px]">
+            <Card className="p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white">Investment Scenario <span className="text-xs font-normal text-slate-500">(AI Prediction)</span></h2>
+                <Tooltip text="These figures are educational estimates based on demonstration historical data, market conditions and news assumptions. They are not guaranteed predictions or financial advice." />
+              </div>
+              <div className="grid gap-2 lg:grid-cols-3">
+                {(["Short Term", "Medium Term", "Long Term"] as ScenarioTerm[]).map((term) => (
+                  <div className="rounded-lg border border-white/10 bg-[#071326] p-2" key={term}>
+                    <h3 className="text-xs font-bold text-amber-200">{term}</h3>
+                    <p className="text-[10px] text-slate-500">{term === "Short Term" ? "1 day - 3 months" : term === "Medium Term" ? "3 months - 3 years" : "3 - 10 years"}</p>
+                    <div className="mt-2 space-y-2">
+                      {scenarios.filter((scenario) => scenario.term === term).map((scenario) => {
+                        const positive = scenario.profitLoss >= 0;
+                        return (
+                          <div className="grid grid-cols-[1fr_auto] gap-1.5 text-xs" key={`${scenario.term}-${scenario.strength}`}>
+                            <span className="text-slate-300">{scenario.strength.replace(" outcome", "")}</span>
+                            <span className="text-right font-semibold text-white">{formatCurrency(scenario.finalValue)}</span>
+                            <span className={positive ? "col-span-2 text-[11px] text-emerald-300" : "col-span-2 text-[11px] text-red-300"}>
+                              {positive ? "+" : ""}{formatCurrency(scenario.profitLoss)} / {positive ? "+" : ""}{scenario.percentageChange}%
+                            </span>
+                            <span className="col-span-2 text-[10px] leading-4 text-slate-500">{scenario.explanation}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <p className="mt-2 text-xl font-bold text-white">{formatCurrency(scenario.finalValue)}</p>
-                    <p className={positive ? "text-sm text-emerald-300" : "text-sm text-red-300"}>
-                      {positive ? "+" : ""}{formatCurrency(scenario.profitLoss)} · {positive ? "+" : ""}{scenario.percentageChange}%
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-400">{scenario.explanation}</p>
                   </div>
-                );
-              })}
-            </ScenarioCard>
-          ))}
-        </div>
-      </Card>
+                ))}
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-300">
+                Amount
+                <input className="h-8 w-28 rounded-md border border-white/10 bg-slate-950 px-2 text-white outline-none focus:border-sky-300" min="1" onChange={(event) => setAmount(Number(event.target.value))} type="number" value={amount} />
+              </label>
+            </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-        <section className="grid gap-5 md:grid-cols-2">
-          <Card>
-            <div className="flex items-center gap-3"><Newspaper className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Relevant News and Alerts</h2></div>
-            <ul className="mt-4 space-y-3 text-sm text-slate-300">
-              <li>Demo alert: {asset.industry} sentiment changed after global market rotation.</li>
-              <li>Demo news: {asset.symbol} is being watched for follow-through after today&apos;s move.</li>
-              <li>Demo reminder: alerts are delayed for Free users.</li>
-            </ul>
+            <Card className="p-3">
+              <div className="flex items-center gap-2"><Info className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Key Data</h2></div>
+              <div className="mt-3 grid gap-1.5">
+                {getKeyData(asset).slice(0, 9).map((item) => (
+                  <div className="flex items-center justify-between border-b border-white/5 py-1 text-xs" key={item.label}>
+                    <span className="text-slate-400">{item.label}</span>
+                    <span className="font-semibold text-white">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Card className="p-3">
+              <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Recent News</h2></div><Link className="text-xs text-sky-300" href="/">View All News</Link></div>
+              <ul className="mt-3 space-y-2 text-xs text-slate-300">
+                <li>{asset.name} watched after today&apos;s demonstration move.</li>
+                <li>{asset.industry} sentiment changed after global market rotation.</li>
+                <li>Analysts monitor pricing, demand and sector momentum.</li>
+              </ul>
+            </Card>
+            <Card className="p-3">
+              <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Upcoming Events</h2></div>
+              <ul className="mt-3 space-y-2 text-xs text-slate-300">
+                <li className="flex justify-between"><span>Earnings Date</span><strong>Jul 31, 2025</strong></li>
+                <li className="flex justify-between"><span>Dividend Ex-Date</span><strong>May 16, 2025</strong></li>
+                <li className="flex justify-between"><span>Product Launch Event</span><strong>Jun 10, 2025</strong></li>
+              </ul>
+            </Card>
+          </div>
+        </section>
+
+        <aside className="space-y-3">
+          <Card className="border-violet-300/20 bg-violet-500/10 p-3">
+            <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" /><h2 className="text-sm font-bold text-white">AI Insights</h2></div><Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{asset.movement >= 0 ? "Bullish" : "Cautious"}</Badge></div>
+            <div className="mt-3 space-y-2 text-xs leading-5 text-slate-200">
+              <p>{aiInsight.whatHappened}</p>
+              <p>{aiInsight.possibleReasons}</p>
+              <p>Confidence: <span className="text-emerald-300">{confidence}%</span></p>
+            </div>
+            <Button className="mt-3 w-full" variant="secondary">View Detailed Analysis</Button>
           </Card>
-          <Card>
-            <div className="flex items-center gap-3"><Info className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Key Data</h2></div>
-            <div className="mt-4 grid gap-2">
-              {getKeyData(asset).map((item) => (
-                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-sm" key={item.label}>
-                  <span className="text-slate-400">{item.label}</span>
-                  <span className="font-semibold text-white">{item.value}</span>
-                </div>
-              ))}
+
+          <Card className="p-3">
+            <h2 className="text-sm font-bold text-white">Analyst Ratings</h2>
+            <div className="mt-3 grid grid-cols-[86px_1fr] items-center gap-3">
+              <div className="grid h-20 w-20 place-items-center rounded-full border-[8px] border-emerald-400/80 bg-[#071326] text-center">
+                <span className="text-xl font-bold text-white">{Math.max(20, Math.round(confidence / 2))}</span>
+                <span className="text-[10px] text-slate-400">Ratings</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <p className="flex justify-between text-emerald-300"><span>Strong Buy</span><span>18</span></p>
+                <p className="flex justify-between text-sky-300"><span>Buy</span><span>9</span></p>
+                <p className="flex justify-between text-slate-300"><span>Hold</span><span>3</span></p>
+                <p className="flex justify-between text-red-300"><span>Sell</span><span>0</span></p>
+              </div>
             </div>
           </Card>
-          <Card>
-            <div className="flex items-center gap-3"><CalendarDays className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Upcoming Events</h2></div>
-            <ul className="mt-4 space-y-3 text-sm text-slate-300">
-              <li>Next demo earnings or market update window.</li>
-              <li>Sector data refresh for {asset.industry}.</li>
-              <li>Practice portfolio review checkpoint.</li>
-            </ul>
-          </Card>
-          <Card>
-            <div className="flex items-center gap-3"><LineChart className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Related Investments</h2></div>
-            <div className="mt-4 space-y-2">
-              {related.map((item) => (
-                <Link className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-sm hover:border-sky-300/40" href={`/investments/${encodeURIComponent(item.symbol)}`} key={item.symbol}>
-                  <span className="font-semibold text-white">{item.symbol}</span>
+
+          <Card className="p-3">
+            <div className="flex items-center gap-2"><LineChart className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Related Stocks</h2></div>
+            <div className="mt-3 space-y-2">
+              {related.slice(0, 4).map((item) => (
+                <Link className="flex items-center justify-between rounded-md border border-white/10 bg-[#071326] px-2 py-1.5 text-xs hover:border-sky-300/40" href={`/investments/${encodeURIComponent(item.symbol)}`} key={item.symbol}>
+                  <span className="font-semibold text-white">{item.name} ({item.symbol})</span>
                   <Movement value={item.movement} />
                 </Link>
               ))}
             </div>
           </Card>
-        </section>
 
-        <aside className="space-y-4">
-          <Card>
-            <div className="flex items-center gap-3"><BookOpen className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">{mode} Mode</h2></div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+          <Card className="p-3">
+            <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">{mode} Mode</h2></div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {(["Beginner", "Expert"] as InvestorMode[]).map((item) => (
-                <button className={`rounded-xl border px-3 py-2 text-sm font-semibold ${mode === item ? "border-sky-300/50 bg-sky-300/15 text-sky-100" : "border-white/10 bg-slate-950 text-slate-300"}`} key={item} onClick={() => setMode(item)} type="button">
+                <button className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${mode === item ? "border-sky-300/50 bg-sky-300/15 text-sky-100" : "border-white/10 bg-slate-950 text-slate-300"}`} key={item} onClick={() => setMode(item)} type="button">
                   {item}
                 </button>
               ))}
-            </div>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
-              {mode === "Beginner"
-                ? "Plain English view: focus on what changed, why it may matter and what to monitor next. Tooltip terms explain concepts without jargon."
-                : `Expert view: demo risk ${risk}/10, confidence ${confidence}%, ${asset.type} exposure, sector momentum and scenario dispersion.`}
-            </p>
-          </Card>
-          <Card className="border-violet-300/20 bg-violet-500/10">
-            <div className="flex items-center gap-3"><BriefcaseBusiness className="h-5 w-5 text-violet-200" /><h2 className="text-lg font-semibold text-white">Broker Comparison Preview</h2></div>
-            <p className="mt-3 text-sm leading-6 text-slate-300">Premium can compare demonstration broker fees, learning tools and asset access. No real broker connection is active.</p>
-          </Card>
-          <Card>
-            <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-sky-300" /><h2 className="text-lg font-semibold text-white">Free and Premium States</h2></div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {(["Free", "Premium"] as const).map((item) => (
-                <button className={`rounded-xl border px-3 py-2 text-sm font-semibold ${plan === item ? "border-violet-300/50 bg-violet-500/20 text-violet-100" : "border-white/10 bg-slate-950 text-slate-300"}`} key={item} onClick={() => setPlan(item)} type="button">
-                  {item}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 space-y-2 text-sm text-slate-300">
-              <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-300" /> Watchlist and practice actions available.</p>
-              <p className="flex items-center gap-2">{plan === "Premium" ? <Crown className="h-4 w-4 text-violet-200" /> : <Lock className="h-4 w-4 text-slate-500" />} Full Smart Alerts and broker comparison {plan === "Premium" ? "unlocked" : "locked"}.</p>
             </div>
           </Card>
         </aside>
@@ -361,5 +271,3 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
     </AppShell>
   );
 }
-
-

@@ -58,26 +58,6 @@ const industryIcons: Record<Industry, string> = {
   Commodities: "AU"
 };
 
-const industryDescriptions: Record<Industry, string> = {
-  Technology: "Software, hardware and cloud leaders",
-  Healthcare: "Hospitals, devices and care networks",
-  "Private Finance": "Banks, lenders and asset managers",
-  "Government Finance": "Bonds and public finance funds",
-  Insurance: "Life, health and property insurers",
-  Cryptocurrency: "Digital assets and blockchain networks",
-  "Artificial Intelligence and Robotics": "AI chips, automation and robotics",
-  Energy: "Oil, gas and energy infrastructure",
-  "Renewable Energy": "Solar, wind and clean power",
-  Automotive: "EV, hybrid and global vehicle makers",
-  Retail: "Online and store-based consumer brands",
-  "Real Estate": "Property, REITs and infrastructure",
-  Pharmaceuticals: "Drugmakers and treatment pipelines",
-  Biotechnology: "Research-led medical innovators",
-  Telecommunications: "Connectivity and network operators",
-  Manufacturing: "Industrial and factory automation",
-  "Defence and Aerospace": "Aerospace, security and defence",
-  Commodities: "Gold, oil and diversified resources"
-};
 
 function formatCurrency(value: number) {
   if (value >= 1000) {
@@ -97,9 +77,9 @@ function Movement({ value }: { value: number }) {
 
 function MarketTicker() {
   return (
-    <Card className="p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wide text-white">Market Overview <span className="text-xs font-normal normal-case text-slate-500">(Major indices)</span></h2><Link className="text-xs text-sky-300" href="/">View All</Link></div><div className="flex gap-2 overflow-x-auto pb-1" aria-label="Demonstration market overview">
+    <Card className="min-w-0 overflow-hidden p-3"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wide text-white">Market Overview <span className="text-xs font-normal normal-case text-slate-500">(Major indices)</span></h2><Link className="text-xs text-sky-300" href="/">View All</Link></div><div className="scrollbar-thin flex max-w-full gap-2 overflow-x-auto pb-2" aria-label="Demonstration market overview">
         {marketOverview.map((market) => (
-          <div className="min-w-32 rounded-lg border border-white/10 bg-[#0a1a33] px-3 py-2" key={market.name}>
+          <div className="min-w-[112px] rounded-lg border border-white/10 bg-[#0a1a33] px-2.5 py-2" key={market.name}>
             <p className="text-[11px] font-semibold text-slate-400">{market.name}</p>
             <div className="mt-1 flex items-center justify-between gap-3 text-xs font-semibold">
               <span className="text-white">{market.value}</span>
@@ -113,21 +93,22 @@ function MarketTicker() {
 }
 
 function IndustryExplorer({ selected, onSelect }: { selected: Industry; onSelect: (industry: Industry) => void }) {
+  const movers = getTopMovers(selected, "Global");
   return (
-    <Card className="border-sky-300/20 bg-slate-950/35">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <Card className="min-w-0 overflow-hidden border-sky-300/20 bg-slate-950/35 p-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-white">TOP EXPLORE MARKETS BY INDUSTRY</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Select an industry to refresh the demonstration market leaders and laggards.</p>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-white">TOP EXPLORE MARKETS BY INDUSTRY</h2>
         </div>
-        <Badge tone="neutral">Demonstration data</Badge>
+        <Badge tone="neutral">Demo</Badge>
       </div>
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+      <div className="scrollbar-thin mt-3 flex max-w-full gap-2 overflow-x-auto pb-2">
         {industries.map((industry) => {
           const isSelected = industry === selected;
           return (
             <button
               aria-pressed={isSelected}
-              className={`min-h-24 min-w-32 rounded-lg border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+              className={`min-h-[108px] min-w-[104px] rounded-lg border p-2.5 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                 isSelected
                   ? "border-sky-300/70 bg-sky-300/15 shadow-[0_0_34px_rgba(56,189,248,0.14)]"
                   : "border-white/10 bg-quantum-panel/70 hover:border-sky-300/35 hover:bg-slate-900"
@@ -137,11 +118,11 @@ function IndustryExplorer({ selected, onSelect }: { selected: Industry; onSelect
               type="button"
             >
               <div className="flex items-start justify-between gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-md border border-sky-300/20 bg-gradient-to-br from-sky-400/20 to-violet-500/20 text-[11px] font-bold text-sky-100">{industryIcons[industry]}</span>
+                <span className="grid h-7 w-7 place-items-center rounded-md border border-sky-300/20 bg-gradient-to-br from-sky-400/20 to-violet-500/20 text-[10px] font-bold text-sky-100">{industryIcons[industry]}</span>
                 {isSelected ? <Sparkles className="h-4 w-4 text-sky-200" /> : null}
               </div>
-              <span className="mt-3 block text-xs font-semibold leading-4 text-white">{industry}</span>
-              <p className="mt-1 text-[10px] leading-4 text-slate-500">{industryDescriptions[industry].split(" ").slice(0, 4).join(" ")}</p>
+              <span className="mt-2 block min-h-8 text-[11px] font-semibold leading-4 text-white">{industry}</span>
+              <span className="mt-1 block text-[10px] font-semibold text-emerald-300">{industry === selected ? `+${movers.growing[0]?.movement.toFixed(2)}%` : "Top movers"}</span>
             </button>
           );
         })}
@@ -248,12 +229,12 @@ function MarketTimingsCard() {
           <p className="text-xs text-slate-400">Based on your browser time zone</p>
         </div>
       </div>
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 space-y-1.5">
         {marketTimings.map((market) => {
           const status = getMarketStatus(market, now);
           const open = status.status === "Open";
           return (
-            <div className="rounded-lg border border-white/10 bg-[#071326] p-2.5" key={market.market}>
+            <div className="rounded-lg border border-white/10 bg-[#071326] p-2" key={market.market}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-sm">{market.flag}</span>
@@ -338,10 +319,10 @@ export function GlobalDashboard() {
   return (
     <AppShell active="Dashboard" plan="Free" title="Global Dashboard">
         <DemoNotice />
-        <MarketTicker />
-        <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
-          <section className="space-y-4">
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[1fr_280px]">
+          <section className="min-w-0 space-y-3">
             <IndustryExplorer onSelect={setIndustry} selected={industry} />
+            <MarketTicker />
             <TopMovers
               industry={industry}
               onIndustryChange={setIndustry}
@@ -350,7 +331,7 @@ export function GlobalDashboard() {
             />
             <SupportingCards />
           </section>
-          <aside className="space-y-4">
+          <aside className="space-y-3">
             <Card className="p-4">
               <label className="relative block">
                 <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
