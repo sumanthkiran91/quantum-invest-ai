@@ -9,6 +9,7 @@ export type LiveMarketQuote = {
   providerSymbol: string;
   price: number;
   movement: number;
+  currencyCode: string;
   priceSource: QuoteDataSource;
   movementSource: QuoteDataSource;
   updatedAt: string;
@@ -45,6 +46,15 @@ const providerSymbolMap: Record<string, string> = {
   USO: "USO"
 };
 
+const currencySymbols: Record<string, string> = {
+  AUD: "A$",
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+  INR: "₹",
+  JPY: "¥"
+};
+
 export const marketOverviewSymbols = ["SPY", "QQQ", "DIA", "EWA", "EWU", "INDY", "EWJ", "BTC", "ETH"] as const;
 
 export function toProviderSymbol(symbol: string) {
@@ -52,12 +62,28 @@ export function toProviderSymbol(symbol: string) {
   return providerSymbolMap[normalized] ?? normalized;
 }
 
-export function formatLiveValue(value: number, currency = true) {
+export function getAssetCurrencyCode(asset: Pick<Investment, "region" | "type" | "market">) {
+  if (asset.type === "Crypto") return "USD";
+  if (asset.region === "Australia") return "AUD";
+  if (asset.region === "UK") return "GBP";
+  if (asset.region === "Europe") return "EUR";
+  if (asset.region === "India") return "INR";
+  if (asset.region === "Japan") return "JPY";
+  return "USD";
+}
+
+export function getCurrencySymbol(currencyCode: string) {
+  return currencySymbols[currencyCode.toUpperCase()] ?? `${currencyCode.toUpperCase()} `;
+}
+
+export function formatLiveValue(value: number, currencyCode = "USD", includeCode = false) {
+  const code = currencyCode.toUpperCase();
+  const decimals = code === "JPY" || code === "INR" || Math.abs(value) >= 1000 ? 0 : 2;
   const formatted = value.toLocaleString(undefined, {
-    maximumFractionDigits: value >= 1000 ? 0 : 2,
-    minimumFractionDigits: value >= 1000 ? 0 : 2
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals
   });
-  return currency ? `$${formatted}` : formatted;
+  return `${getCurrencySymbol(code)}${formatted}${includeCode ? ` ${code}` : ""}`;
 }
 
 export function buildDemoQuote(symbol: string, updatedAt = new Date().toISOString()): LiveMarketQuote | null {
@@ -68,6 +94,7 @@ export function buildDemoQuote(symbol: string, updatedAt = new Date().toISOStrin
     providerSymbol: toProviderSymbol(asset.symbol),
     price: asset.demoPrice,
     movement: asset.movement,
+    currencyCode: getAssetCurrencyCode(asset),
     priceSource: "demo",
     movementSource: "demo",
     updatedAt

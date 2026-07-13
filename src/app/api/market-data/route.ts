@@ -3,6 +3,7 @@ import { allInvestments, marketOverview } from "@/lib/market-data";
 import {
   buildDemoMarketDataResponse,
   formatLiveValue,
+  getAssetCurrencyCode,
   liveDataFallbackMessage,
   marketOverviewSymbols,
   toProviderSymbol,
@@ -38,6 +39,16 @@ function getDemoMovement(symbol: string) {
   return allInvestments.find((asset) => asset.symbol.toUpperCase() === symbol.toUpperCase())?.movement ?? 0;
 }
 
+function getQuoteCurrencyCode(symbol: string) {
+  const asset = allInvestments.find((item) => item.symbol.toUpperCase() === symbol.toUpperCase());
+  return asset ? getAssetCurrencyCode(asset) : "USD";
+}
+
+function getCryptoQuoteCurrency() {
+  const configured = (process.env.MARKET_DATA_CRYPTO_CURRENCY ?? "AUD").trim().toUpperCase();
+  return /^[A-Z]{3,5}$/.test(configured) ? configured : "AUD";
+}
+
 function getTimeoutMs() {
   const configured = Number(process.env.MARKET_DATA_TIMEOUT_MS);
   return Number.isFinite(configured) && configured > 500 ? configured : DEFAULT_TIMEOUT_MS;
@@ -60,13 +71,13 @@ function assertProviderPayload(data: Record<string, unknown>) {
   if (note) throw new Error(String(note));
 }
 
-async function fetchAlphaQuote(symbol: string, apiKey: string, updatedAt: string): Promise<LiveMarketQuote> {
+async function fetchAlphaQuote(symbol: string, apiKey: string, updatedAt: string, cryptoCurrencyCode: string): Promise<LiveMarketQuote> {
   const providerSymbol = toProviderSymbol(symbol);
   if (cryptoSymbols.has(providerSymbol)) {
     const url = new URL("https://www.alphavantage.co/query");
     url.searchParams.set("function", "CURRENCY_EXCHANGE_RATE");
     url.searchParams.set("from_currency", providerSymbol);
-    url.searchParams.set("to_currency", "USD");
+    url.searchParams.set("to_currency", cryptoCurrencyCode);
     url.searchParams.set("apikey", apiKey);
     const data = await fetchJsonWithTimeout(url);
     assertProviderPayload(data);
@@ -78,6 +89,7 @@ async function fetchAlphaQuote(symbol: string, apiKey: string, updatedAt: string
       providerSymbol,
       price,
       movement: getDemoMovement(symbol),
+      currencyCode: cryptoCurrencyCode,
       priceSource: "live",
       movementSource: "demo",
       updatedAt
@@ -98,6 +110,7 @@ async function fetchAlphaQuote(symbol: string, apiKey: string, updatedAt: string
     providerSymbol,
     price,
     movement: parsePercent(quote?.["10. change percent"]),
+    currencyCode: getQuoteCurrencyCode(symbol),
     priceSource: "live",
     movementSource: "live",
     updatedAt
@@ -108,7 +121,7 @@ function quoteToOverviewItem(name: string, quote: LiveMarketQuote | null): LiveM
   if (!quote) return null;
   return {
     name,
-    value: formatLiveValue(quote.price),
+    value: formatLiveValue(quote.price, quote.currencyCode),
     movement: quote.movement,
     source: quote.priceSource
   };
@@ -117,7 +130,8 @@ function quoteToOverviewItem(name: string, quote: LiveMarketQuote | null): LiveM
 async function getAlphaVantageData(symbols: string[], includeOverview: boolean, apiKey: string): Promise<LiveMarketDataResponse> {
   const updatedAt = new Date().toISOString();
   const requestSymbols = includeOverview ? Array.from(new Set([...symbols, ...marketOverviewSymbols])) : symbols;
-  const results = await Promise.allSettled(requestSymbols.map((symbol) => fetchAlphaQuote(symbol, apiKey, updatedAt)));
+  const cryptoCurrencyCode = getCryptoQuoteCurrency();
+  const results = await Promise.allSettled(requestSymbols.map((symbol) => fetchAlphaQuote(symbol, apiKey, updatedAt, cryptoCurrencyCode)));
   const liveQuotes = results.reduce<Record<string, LiveMarketQuote>>((accumulator, result) => {
     if (result.status === "fulfilled") accumulator[result.value.symbol] = result.value;
     return accumulator;

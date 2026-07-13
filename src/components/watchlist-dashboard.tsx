@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -21,6 +21,7 @@ import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { DemoNotice } from "@/components/demo-notice";
 import { allInvestments, findInvestment, type Investment } from "@/lib/market-data";
+import { applyLiveQuote, buildDemoMarketDataResponse, formatLiveValue, getAssetCurrencyCode, getMarketDataSymbols, liveDataFallbackMessage, type LiveMarketDataResponse, type LiveMarketQuote } from "@/lib/live-market-data";
 import {
   canAddWatchlistItem,
   filterWatchlistAssets,
@@ -44,11 +45,18 @@ const sortOptions: { label: string; value: SortOption }[] = [
   { label: "Symbol A-Z", value: "symbol-asc" }
 ];
 
-function formatCurrency(value: number) {
-  if (value >= 1000) {
-    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+function formatAssetCurrency(value: number, asset: Investment, quote?: LiveMarketQuote) {
+  return formatLiveValue(value, quote?.currencyCode ?? getAssetCurrencyCode(asset), true);
+}
+
+function WatchlistMarketDataStatus({ marketData }: { marketData: LiveMarketDataResponse | null }) {
+  if (!marketData) {
+    return <div className="rounded-lg border border-sky-300/15 bg-sky-300/5 px-3 py-2 text-xs text-sky-100">Checking live display data. Safe fallback values remain available.</div>;
   }
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (marketData.warning) {
+    return <div className="rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100" role="status">{marketData.warning}</div>;
+  }
+  return <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100" role="status">Live display data connected. Last updated {new Date(marketData.updatedAt).toLocaleTimeString()}.</div>;
 }
 
 function Movement({ value }: { value: number }) {
@@ -96,6 +104,7 @@ export function WatchlistDashboard() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [notice, setNotice] = useState("");
+  const [marketData, setMarketData] = useState<LiveMarketDataResponse | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -126,20 +135,55 @@ export function WatchlistDashboard() {
     [symbols]
   );
 
+  const requestedSymbols = useMemo(() => getMarketDataSymbols(selectedAssets.map((asset) => asset.symbol)), [selectedAssets]);
+
+  useEffect(() => {
+    if (status !== "ready" || requestedSymbols.length === 0) {
+      setMarketData(null);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+    async function loadMarketData() {
+      try {
+        const response = await fetch(`/api/market-data?symbols=${encodeURIComponent(requestedSymbols.join(","))}`, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("Market data request failed");
+        const data = (await response.json()) as LiveMarketDataResponse;
+        if (!cancelled) setMarketData(data);
+      } catch {
+        if (!cancelled) setMarketData(buildDemoMarketDataResponse(requestedSymbols, liveDataFallbackMessage));
+      }
+    }
+    loadMarketData();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [requestedSymbols, status]);
+
+  const displayAssets = useMemo(
+    () => selectedAssets.map((asset) => applyLiveQuote(asset, marketData?.quotes[asset.symbol])),
+    [marketData, selectedAssets]
+  );
+
   const markets = useMemo(
-    () => ["All markets", ...Array.from(new Set(selectedAssets.map((asset) => asset.market))).sort()],
-    [selectedAssets]
+    () => ["All markets", ...Array.from(new Set(displayAssets.map((asset) => asset.market))).sort()],
+    [displayAssets]
   );
 
   const visibleAssets = useMemo(
-    () => filterWatchlistAssets({ assets: selectedAssets, tab, query, market, sort }),
-    [market, query, selectedAssets, sort, tab]
+    () => filterWatchlistAssets({ assets: displayAssets, tab, query, market, sort }),
+    [displayAssets, market, query, sort, tab]
   );
 
   const availableAssets = allInvestments.filter((asset) => !symbols.includes(asset.symbol)).slice(0, 10);
   const isFreeLimitReached = plan === "Free" && symbols.length >= FREE_WATCHLIST_LIMIT;
-  const totalMarketValue = selectedAssets.reduce((total, asset) => total + getDemoMarketValue(asset), 0);
-  const todayGainValue = selectedAssets.reduce((total, asset) => total + getDemoMarketValue(asset) * (asset.movement / 100), 0);
+  const totalMarketValue = displayAssets.reduce((total, asset) => total + getDemoMarketValue(asset), 0);
+  const todayGainValue = displayAssets.reduce((total, asset) => total + getDemoMarketValue(asset) * (asset.movement / 100), 0);
   const todayGainPercent = totalMarketValue ? (todayGainValue / totalMarketValue) * 100 : 0;
 
   function changePlan(nextPlan: AccountPlan) {
@@ -178,6 +222,7 @@ export function WatchlistDashboard() {
   return (
     <AppShell active="Watchlist" plan={plan} title="Watchlist Dashboard">
       <DemoNotice />
+      <WatchlistMarketDataStatus marketData={marketData} />
 
       <Card className="border-sky-300/20 bg-slate-950/35">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -232,13 +277,13 @@ export function WatchlistDashboard() {
             <p className="mt-1 text-2xl font-bold text-white">{symbols.length}</p>
           </div>
           <div className="border-white/10 p-4 md:border-r">
-            <p className="text-xs text-slate-400">Today&apos;s Gain</p>
+            <p className="text-xs text-slate-400">Today&apos;s Display Gain</p>
             <p className={todayGainValue >= 0 ? "mt-1 text-sm font-bold text-emerald-300" : "mt-1 text-sm font-bold text-red-300"}>{todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%</p>
-            <p className={todayGainValue >= 0 ? "text-xs text-emerald-300" : "text-xs text-red-300"}>{formatCurrency(todayGainValue)}</p>
+            <p className={todayGainValue >= 0 ? "text-xs text-emerald-300" : "text-xs text-red-300"}>{formatLiveValue(todayGainValue, "USD", true)}</p>
           </div>
           <div className="p-4">
-            <p className="text-xs text-slate-400">Total Value</p>
-            <p className="mt-1 text-2xl font-bold text-white">{formatCurrency(totalMarketValue)}</p>
+            <p className="text-xs text-slate-400">Display Value</p>
+            <p className="mt-1 text-2xl font-bold text-white">{formatLiveValue(totalMarketValue, "USD", true)}</p>
           </div>
         </div>
       </Card>
@@ -365,12 +410,12 @@ export function WatchlistDashboard() {
                         <span className="mt-2 inline-flex lg:hidden"><Badge tone="neutral">{asset.type}</Badge></span>
                       </Link>
                       <div className="text-sm text-slate-300"><span className="lg:hidden text-slate-500">Market: </span>{asset.market}</div>
-                      <div className="text-sm font-semibold text-white"><span className="lg:hidden text-slate-500">Price: </span>{formatCurrency(asset.demoPrice)}</div>
+                      <div className="text-sm font-semibold text-white"><span className="lg:hidden text-slate-500">Price: </span>{formatAssetCurrency(asset.demoPrice, asset, marketData?.quotes[asset.symbol])}</div>
                       <div className="text-sm font-semibold"><span className="lg:hidden text-slate-500">Today: </span><Movement value={asset.movement} /></div>
-                      <div className="text-sm text-slate-200"><span className="lg:hidden text-slate-500">Value: </span>{formatCurrency(marketValue)}</div>
+                      <div className="text-sm text-slate-200"><span className="lg:hidden text-slate-500">Value: </span>{formatAssetCurrency(marketValue, asset, marketData?.quotes[asset.symbol])}</div>
                       <TrendLine asset={asset} />
                       <div>
-                        <Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{plan === "Premium" ? "Smart" : "Delayed"}</Badge>
+                        <Badge tone={asset.movement >= 0 ? "positive" : "negative"}>{marketData?.quotes[asset.symbol]?.priceSource === "live" ? "Live" : plan === "Premium" ? "Smart" : "Delayed"}</Badge>
                       </div>
                       <div className="flex items-center gap-2">
                         <button aria-label={`Favourite ${asset.symbol}`} className="rounded-full border border-white/10 p-2 text-amber-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300" type="button">

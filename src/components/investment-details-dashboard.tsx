@@ -38,14 +38,21 @@ import {
 import {
   applyLiveQuote,
   buildDemoMarketDataResponse,
+  formatLiveValue,
+  getAssetCurrencyCode,
   getMarketDataSymbols,
   liveDataFallbackMessage,
-  type LiveMarketDataResponse
+  type LiveMarketDataResponse,
+  type LiveMarketQuote
 } from "@/lib/live-market-data";
 
 function formatCurrency(value: number) {
   if (value >= 1000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatAssetCurrency(value: number, asset: Investment, quote?: LiveMarketQuote) {
+  return formatLiveValue(value, quote?.currencyCode ?? getAssetCurrencyCode(asset), true);
 }
 
 function formatBrokerCurrency(value: number, broker: Pick<BrokerEstimate, "currencyCode" | "currencySymbol">) {
@@ -165,6 +172,9 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const confidence = getConfidence(displayAsset);
   const related = relatedBase.map((item) => applyLiveQuote(item, marketData?.quotes[item.symbol]));
   const assetQuote = marketData?.quotes[asset.symbol];
+  const keyData = getKeyData(displayAsset).map((item) =>
+    item.label === "Display price" ? { ...item, value: formatAssetCurrency(displayAsset.demoPrice, displayAsset, assetQuote) } : item
+  );
   const brokers = getTopBrokersForRegion(brokerRegion as Region);
   const brokerCurrency = brokers[0];
   const recommendedBroker = getRecommendedBroker(brokerRegion as Region, amount);
@@ -197,7 +207,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
                 </div>
                 <p className="mt-1 text-xs text-slate-400">{displayAsset.market} / {displayAsset.region} / {displayAsset.type}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <span className="text-2xl font-bold text-white">{formatCurrency(displayAsset.demoPrice)}</span>
+                  <span className="text-2xl font-bold text-white">{formatAssetCurrency(displayAsset.demoPrice, displayAsset, assetQuote)}</span>
                   <span className="text-sm font-semibold"><Movement value={displayAsset.movement} /> today</span>
                   <span className="text-xs text-slate-500">Display data only, no trading connection</span>
                 </div>
@@ -263,7 +273,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
             <Card className="p-3">
               <div className="flex items-center gap-2"><Info className="h-4 w-4 text-sky-300" /><h2 className="text-sm font-bold text-white">Key Data</h2></div>
               <div className="mt-3 grid gap-1.5">
-                {getKeyData(displayAsset).slice(0, 9).map((item) => (
+                {keyData.slice(0, 9).map((item) => (
                   <div className="flex items-center justify-between border-b border-white/5 py-1 text-xs" key={item.label}>
                     <span className="text-slate-400">{item.label}</span>
                     <span className="font-semibold text-white">{item.value}</span>

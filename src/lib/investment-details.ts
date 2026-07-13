@@ -33,22 +33,27 @@ export function getMarketStatusLabel(asset: Investment) {
 }
 
 export function getChartPoints(asset: Investment, range: TimeRange) {
-  const rangeScale: Record<TimeRange, number> = {
-    "1D": 0.8,
-    "1W": 1.1,
-    "1M": 1.6,
-    "3M": 2.2,
-    "6M": 2.8,
-    "1Y": 3.6,
-    "5Y": 5.4,
-    Max: 6.8
+  const rangeConfig: Record<TimeRange, { points: number; volatility: number; momentum: number }> = {
+    "1D": { points: 24, volatility: 0.004, momentum: 0.18 },
+    "1W": { points: 14, volatility: 0.01, momentum: 0.45 },
+    "1M": { points: 22, volatility: 0.018, momentum: 0.8 },
+    "3M": { points: 24, volatility: 0.028, momentum: 1.2 },
+    "6M": { points: 26, volatility: 0.038, momentum: 1.65 },
+    "1Y": { points: 30, volatility: 0.052, momentum: 2.15 },
+    "5Y": { points: 36, volatility: 0.09, momentum: 4.4 },
+    Max: { points: 44, volatility: 0.13, momentum: 6.2 }
   };
+  const config = rangeConfig[range];
   const seed = asset.symbol.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
-  const risk = getRiskScore(asset);
-  return Array.from({ length: 18 }, (_, index) => {
-    const wave = Math.sin((seed + index * 19) / 15) * risk * rangeScale[range];
-    const trend = asset.movement * index * 0.38 * rangeScale[range];
-    return Number(Math.max(5, 100 + wave + trend).toFixed(2));
+  const risk = getRiskScore(asset) / 10;
+  const basePrice = Math.max(0.01, asset.demoPrice);
+
+  return Array.from({ length: config.points }, (_, index) => {
+    const progress = config.points === 1 ? 0 : index / (config.points - 1);
+    const primaryWave = Math.sin((seed + index * 17) / 11) * basePrice * config.volatility * risk;
+    const secondaryWave = Math.cos((seed + index * 7) / 9) * basePrice * config.volatility * 0.45;
+    const drift = basePrice * (asset.movement / 100) * progress * config.momentum;
+    return Number(Math.max(0.01, basePrice + primaryWave + secondaryWave + drift).toFixed(2));
   });
 }
 

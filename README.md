@@ -1,12 +1,12 @@
-﻿# Quantum Invest AI
+# Quantum Invest AI
 
 Quantum Invest AI is an interactive prototype for a global AI investment intelligence platform. It helps testers explore demonstration markets, save local watchlists, review AI-style educational insights, compare mock investment scenarios, and submit local feedback.
 
 ## Prototype status
 
-This is a friends-and-family testing prototype. It uses local browser storage and mock data only.
+This is a friends-and-family testing prototype. It uses local browser storage and can show live, delayed, or demonstration display data depending on environment setup.
 
-- No live market feeds
+- Optional live/delayed display market data only; safe demo fallback remains active
 - No real broker connections
 - No production authentication
 - No payment processing
@@ -86,7 +86,16 @@ Copy `.env.example` if needed. Do not commit `.env` or `.env.local` files.
 cp .env.example .env.local
 ```
 
-No secrets are required for the current prototype.
+Optional live display data uses Alpha Vantage. Create a key at `https://www.alphavantage.co/support/#api-key`, then add these in Vercel Project Settings -> Environment Variables:
+
+```text
+ALPHA_VANTAGE_API_KEY=your_key_here
+MARKET_DATA_MODE=live
+MARKET_DATA_CRYPTO_CURRENCY=AUD
+MARKET_DATA_TIMEOUT_MS=3500
+```
+
+`MARKET_DATA_CRYPTO_CURRENCY=AUD` makes live BTC/ETH crypto quotes display in Australian dollars when the provider supports the currency pair. Without the key, the app intentionally shows labelled demonstration fallback data.
 
 ## GitHub push steps
 
@@ -122,7 +131,7 @@ git push -u origin main
 4. Build command: `pnpm build`.
 5. Install command: `pnpm install`.
 6. Output directory: leave default.
-7. Environment variables: none required. Optional public prototype flags are listed in `.env.example`.
+7. Environment variables: optional. Add `ALPHA_VANTAGE_API_KEY`, `MARKET_DATA_MODE=live`, `MARKET_DATA_CRYPTO_CURRENCY=AUD`, and `MARKET_DATA_TIMEOUT_MS=3500` if you want live/delayed display data.
 8. Click Deploy.
 9. Open the generated Vercel preview URL and confirm the app loads before sharing it with testers.
 
