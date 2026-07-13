@@ -93,9 +93,10 @@ ALPHA_VANTAGE_API_KEY=your_key_here
 MARKET_DATA_MODE=live
 MARKET_DATA_CRYPTO_CURRENCY=AUD
 MARKET_DATA_TIMEOUT_MS=3500
+COINGECKO_DEMO_API_KEY=optional_crypto_key
 ```
 
-`MARKET_DATA_CRYPTO_CURRENCY=AUD` makes live BTC/ETH crypto quotes display in Australian dollars when the provider supports the currency pair. Without the key, the app intentionally shows labelled demonstration fallback data.
+`MARKET_DATA_CRYPTO_CURRENCY=AUD` makes live BTC/ETH crypto quotes display in Australian dollars when the provider supports the currency pair. Crypto quotes use CoinGecko first, then Alpha Vantage as fallback; `COINGECKO_DEMO_API_KEY` is optional but recommended. Without usable provider data, the app intentionally shows labelled demonstration fallback data.
 
 ## GitHub push steps
 

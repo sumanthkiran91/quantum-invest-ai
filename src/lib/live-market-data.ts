@@ -1,7 +1,7 @@
 import { allInvestments, marketOverview, type Investment } from "./market-data.ts";
 
 export type MarketDataMode = "live" | "demo";
-export type MarketDataProvider = "alpha-vantage" | "demo";
+export type MarketDataProvider = "alpha-vantage" | "coingecko" | "mixed" | "demo";
 export type QuoteDataSource = "live" | "demo";
 
 export type LiveMarketQuote = {
@@ -25,6 +25,7 @@ export type LiveMarketOverviewItem = {
 export type LiveMarketDataResponse = {
   mode: MarketDataMode;
   provider: MarketDataProvider;
+  diagnostics?: string;
   updatedAt: string;
   warning?: string;
   quotes: Record<string, LiveMarketQuote>;
@@ -49,10 +50,10 @@ const providerSymbolMap: Record<string, string> = {
 const currencySymbols: Record<string, string> = {
   AUD: "A$",
   USD: "$",
-  GBP: "£",
-  EUR: "€",
-  INR: "₹",
-  JPY: "¥"
+  GBP: "\u00a3",
+  EUR: "\u20ac",
+  INR: "\u20b9",
+  JPY: "\u00a5"
 };
 
 export const marketOverviewSymbols = ["SPY", "QQQ", "DIA", "EWA", "EWU", "INDY", "EWJ", "BTC", "ETH"] as const;
@@ -101,7 +102,7 @@ export function buildDemoQuote(symbol: string, updatedAt = new Date().toISOStrin
   };
 }
 
-export function buildDemoMarketDataResponse(symbols: string[], warning?: string): LiveMarketDataResponse {
+export function buildDemoMarketDataResponse(symbols: string[], warning?: string, diagnostics?: string): LiveMarketDataResponse {
   const updatedAt = new Date().toISOString();
   const uniqueSymbols = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean)));
   const quotes = uniqueSymbols.reduce<Record<string, LiveMarketQuote>>((accumulator, symbol) => {
@@ -113,6 +114,7 @@ export function buildDemoMarketDataResponse(symbols: string[], warning?: string)
   return {
     mode: "demo",
     provider: "demo",
+    diagnostics,
     updatedAt,
     warning,
     quotes,
