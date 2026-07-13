@@ -7,6 +7,7 @@ import {
   CalendarDays,
   HelpCircle,
   Info,
+  Check,
   LineChart,
   Newspaper,
   PlayCircle,
@@ -18,8 +19,9 @@ import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { DemoNotice } from "@/components/demo-notice";
-import { allInvestments, type Investment } from "@/lib/market-data";
+import { allInvestments, type Investment, type Region } from "@/lib/market-data";
 import { planStorageKey, sessionStorageKey, type LocalSession } from "@/lib/auth";
+import { brokerRegions, estimateBrokerTotal, getRecommendedBroker, getTopBrokersForRegion, type BrokerRegion } from "@/lib/broker-data";
 import {
   generateScenarios,
   getAiInsight,
@@ -93,6 +95,7 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const [plan, setPlan] = useState<"Free" | "Premium">("Free");
   const [watchlistNotice, setWatchlistNotice] = useState("");
   const [marketData, setMarketData] = useState<LiveMarketDataResponse | null>(null);
+  const [brokerRegion, setBrokerRegion] = useState<BrokerRegion>("Australia");
 
   useEffect(() => {
     const syncPlan = () => {
@@ -145,6 +148,8 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
   const confidence = getConfidence(displayAsset);
   const related = relatedBase.map((item) => applyLiveQuote(item, marketData?.quotes[item.symbol]));
   const assetQuote = marketData?.quotes[asset.symbol];
+  const brokers = getTopBrokersForRegion(brokerRegion as Region);
+  const recommendedBroker = getRecommendedBroker(brokerRegion as Region);
 
   function addToWatchlist() {
     const raw = window.localStorage.getItem("quantum-invest-ai-watchlist");
@@ -249,6 +254,56 @@ export function InvestmentDetailsDashboard({ asset }: { asset: Investment }) {
               </div>
             </Card>
           </div>
+
+          <Card className="p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white">Broker Comparison <span className="text-xs font-normal text-slate-500">(Practice {displayAsset.symbol} - {formatCurrency(amount)})</span></h2>
+                <Tooltip text="Broker fees and features are prototype estimates for comparison only. Charges, spreads, FX fees, market access and eligibility can change. Always verify directly with the broker before opening an account or placing a trade." />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400" htmlFor="broker-region">Region</label>
+                <select
+                  className="rounded-md border border-white/10 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none focus:border-sky-300"
+                  id="broker-region"
+                  onChange={(event) => setBrokerRegion(event.target.value as BrokerRegion)}
+                  value={brokerRegion}
+                >
+                  {brokerRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="mt-3 overflow-hidden rounded-lg border border-white/10">
+              <div className="grid grid-cols-[1.15fr_0.7fr_0.75fr_0.7fr_0.7fr_1fr] gap-2 bg-slate-950/70 px-2 py-2 text-[11px] font-semibold text-slate-400">
+                <span>Broker</span><span>Est. fee</span><span>Total cost</span><span>Speed</span><span>Fractional</span><span>Best for</span>
+              </div>
+              <div className="divide-y divide-white/10">
+                {brokers.map((broker) => (
+                  <div className="grid grid-cols-[1.15fr_0.7fr_0.75fr_0.7fr_0.7fr_1fr] gap-2 px-2 py-2 text-xs text-slate-300" key={broker.name}>
+                    <span className="font-semibold text-white">{broker.name}</span>
+                    <span>{formatCurrency(broker.fee)}</span>
+                    <span>{formatCurrency(estimateBrokerTotal(amount, broker))}</span>
+                    <span>{broker.speed}</span>
+                    <span>{broker.fractional ? <Check className="h-4 w-4 text-emerald-300" /> : <span className="text-slate-500">No</span>}</span>
+                    <span>{broker.bestFor}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-400/10 p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-amber-100">AI suggestion: {recommendedBroker.name}</p>
+                  <ul className="mt-2 space-y-1 text-xs text-amber-50/90">
+                    <li>Lowest estimated fee for this selected region</li>
+                    <li>{recommendedBroker.speed} order flow in the prototype comparison</li>
+                    <li>Best for {recommendedBroker.bestFor.toLowerCase()}</li>
+                  </ul>
+                </div>
+                <Button variant="secondary">Practice with {recommendedBroker.name}</Button>
+              </div>
+            </div>
+          </Card>
 
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="p-3">

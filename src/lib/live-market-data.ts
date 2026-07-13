@@ -31,7 +31,7 @@ export type LiveMarketDataResponse = {
 };
 
 export const liveDataFallbackMessage =
-  "Live market data is temporarily unavailable. Due to a technical issue, demonstration data is being displayed and live data will be restored automatically when the provider responds.";
+  "Live market data is temporarily unavailable, so demonstration data is being displayed for now. The app will automatically return to live display data when the provider responds.";
 
 const providerSymbolMap: Record<string, string> = {
   BTC: "BTC",

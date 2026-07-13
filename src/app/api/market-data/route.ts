@@ -161,7 +161,7 @@ export async function GET(request: Request) {
   }
 
   if (!apiKey) {
-    return NextResponse.json(buildDemoMarketDataResponse(symbols, "Live data is not configured yet. Add ALPHA_VANTAGE_API_KEY to show provider data; demonstration data is being displayed for now."));
+    return NextResponse.json(buildDemoMarketDataResponse(symbols, "Live data is not connected yet, so demonstration data is being displayed for now. Add an Alpha Vantage API key in Vercel environment variables to enable live display data."));
   }
 
   try {
